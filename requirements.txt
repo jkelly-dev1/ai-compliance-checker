@@ -1,0 +1,3 @@
+# The measurement and the test suite need NOTHING outside the standard library.
+# This file exists for the paid leg, which has not been run yet.
+anthropic>=0.60

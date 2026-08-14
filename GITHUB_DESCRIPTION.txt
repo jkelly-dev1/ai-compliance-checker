@@ -1,0 +1,2 @@
+What fraction of a regulatory decision can be automated without ever being
+wrong -- measured across zoning, HIPAA, PCI DSS, SOC 2 and the CARD Act.

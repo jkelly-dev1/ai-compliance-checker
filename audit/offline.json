@@ -1,0 +1,1693 @@
+{
+  "note": "Constructed populations with known ground truth. Measures the checkers, not any real portfolio. The regimes are simplified encodings, not compliance products, and nothing here is legal advice.",
+  "cases_per_regime": 600,
+  "ordinance_counts": {
+    "limits": 6,
+    "definitions": 10,
+    "definitions_per_limit": 1.67,
+    "rules": 4
+  },
+  "regimes": {
+    "zoning": {
+      "citation": "Northgate R-1, a synthetic ordinance -- not any jurisdiction's code",
+      "rules": [
+        "setback",
+        "height",
+        "coverage",
+        "stories"
+      ]
+    },
+    "hipaa": {
+      "citation": "45 CFR 164 (subsets of 164.306, 164.308, 164.312, 164.514)",
+      "rules": [
+        "encryption_at_rest",
+        "audit_controls",
+        "unique_user_id",
+        "workforce_termination",
+        "business_associate",
+        "de_identification"
+      ]
+    },
+    "pci_dss": {
+      "citation": "PCI DSS v4.0 (subsets of Req 1, 2, 3, 8, 10, 11)",
+      "rules": [
+        "network_segmentation",
+        "no_vendor_defaults",
+        "pan_storage",
+        "mfa_into_cde",
+        "log_retention",
+        "vuln_scanning"
+      ]
+    },
+    "soc2": {
+      "citation": "AICPA TSC 2017 (rev. 2022 points of focus), subsets of CC6-CC9, A1, C1",
+      "rules": [
+        "logical_access",
+        "change_management",
+        "monitoring",
+        "vendor_management",
+        "availability_capacity",
+        "confidential_disposal"
+      ]
+    },
+    "card_act": {
+      "citation": "Credit CARD Act of 2009 via Reg Z: 12 CFR 1026.53, 1026.5(b)(2)(ii), 1026.56",
+      "rules": [
+        "payment_allocation",
+        "statement_timing",
+        "over_limit_opt_in"
+      ]
+    }
+  },
+  "boundary": {
+    "zoning": {
+      "regime": "zoning",
+      "citation": "Northgate R-1, a synthetic ordinance -- not any jurisdiction's code",
+      "cases": 600,
+      "rules": 4,
+      "decisions": 2400,
+      "tier_mix": {
+        "bim": 133,
+        "cad": 152,
+        "pdf_vector": 238,
+        "pdf_scan": 77
+      },
+      "checkers": {
+        "v1_naive": {
+          "decided": 2400,
+          "decided_pct": 100.0,
+          "wrong": 484,
+          "wrong_pct_of_decided": 20.2,
+          "refused": 0
+        },
+        "v2_definition_aware": {
+          "decided": 684,
+          "decided_pct": 28.5,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1716
+        },
+        "v4_minimal": {
+          "decided": 684,
+          "decided_pct": 28.5,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1716
+        },
+        "v3_with_intake": {
+          "decided": 1389,
+          "decided_pct": 57.9,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1011
+        }
+      },
+      "per_rule": {
+        "v1_naive": {
+          "setback": {
+            "right": 452,
+            "wrong": 148,
+            "refused": 0,
+            "false_pass": 44,
+            "false_fail": 104,
+            "direction": "MIXED"
+          },
+          "height": {
+            "right": 313,
+            "wrong": 287,
+            "refused": 0,
+            "false_pass": 1,
+            "false_fail": 286,
+            "direction": "MIXED"
+          },
+          "coverage": {
+            "right": 563,
+            "wrong": 37,
+            "refused": 0,
+            "false_pass": 9,
+            "false_fail": 28,
+            "direction": "MIXED"
+          },
+          "stories": {
+            "right": 588,
+            "wrong": 12,
+            "refused": 0,
+            "false_pass": 7,
+            "false_fail": 5,
+            "direction": "MIXED"
+          }
+        },
+        "v2_definition_aware": {
+          "setback": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "height": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "coverage": {
+            "right": 285,
+            "wrong": 0,
+            "refused": 315,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "stories": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v4_minimal": {
+          "setback": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "height": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "coverage": {
+            "right": 285,
+            "wrong": 0,
+            "refused": 315,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "stories": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v3_with_intake": {
+          "setback": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "height": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "coverage": {
+            "right": 523,
+            "wrong": 0,
+            "refused": 77,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "stories": {
+            "right": 133,
+            "wrong": 0,
+            "refused": 467,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        }
+      },
+      "by_tier": {
+        "v1_naive": {
+          "bim": {
+            "decided": 532,
+            "wrong": 102,
+            "refused": 0
+          },
+          "cad": {
+            "decided": 608,
+            "wrong": 106,
+            "refused": 0
+          },
+          "pdf_vector": {
+            "decided": 952,
+            "wrong": 204,
+            "refused": 0
+          },
+          "pdf_scan": {
+            "decided": 308,
+            "wrong": 72,
+            "refused": 0
+          }
+        },
+        "v2_definition_aware": {
+          "bim": {
+            "decided": 532,
+            "wrong": 0,
+            "refused": 0
+          },
+          "cad": {
+            "decided": 152,
+            "wrong": 0,
+            "refused": 456
+          },
+          "pdf_vector": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 952
+          },
+          "pdf_scan": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 308
+          }
+        },
+        "v4_minimal": {
+          "bim": {
+            "decided": 532,
+            "wrong": 0,
+            "refused": 0
+          },
+          "cad": {
+            "decided": 152,
+            "wrong": 0,
+            "refused": 456
+          },
+          "pdf_vector": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 952
+          },
+          "pdf_scan": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 308
+          }
+        },
+        "v3_with_intake": {
+          "bim": {
+            "decided": 532,
+            "wrong": 0,
+            "refused": 0
+          },
+          "cad": {
+            "decided": 304,
+            "wrong": 0,
+            "refused": 304
+          },
+          "pdf_vector": {
+            "decided": 476,
+            "wrong": 0,
+            "refused": 476
+          },
+          "pdf_scan": {
+            "decided": 77,
+            "wrong": 0,
+            "refused": 231
+          }
+        }
+      },
+      "refusal_causes": {
+        "access_strip_ft": 630,
+        "wall_polygon": 630,
+        "deck_height_in": 467,
+        "perimeter_grades_ft": 467,
+        "basement_rear_exposure_ft": 467,
+        "mezzanine_area_sf": 467,
+        "room_below_area_sf": 467,
+        "eave_height_ft": 315,
+        "projection_schedule": 154,
+        "accessory_footprint_sf": 77
+      }
+    },
+    "hipaa": {
+      "regime": "hipaa",
+      "citation": "45 CFR 164 (subsets of 164.306, 164.308, 164.312, 164.514)",
+      "cases": 600,
+      "rules": 6,
+      "decisions": 3600,
+      "tier_mix": {
+        "questionnaire": 209,
+        "full_assessment": 74,
+        "config_export": 170,
+        "document_review": 147
+      },
+      "checkers": {
+        "v1_naive": {
+          "decided": 3600,
+          "decided_pct": 100.0,
+          "wrong": 791,
+          "wrong_pct_of_decided": 22.0,
+          "refused": 0
+        },
+        "v2_definition_aware": {
+          "decided": 1558,
+          "decided_pct": 43.3,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 2042
+        },
+        "v4_minimal": {
+          "decided": 2467,
+          "decided_pct": 68.5,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1133
+        },
+        "v3_with_intake": {
+          "decided": 2656,
+          "decided_pct": 73.8,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 944
+        }
+      },
+      "per_rule": {
+        "v1_naive": {
+          "encryption_at_rest": {
+            "right": 470,
+            "wrong": 130,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 130,
+            "direction": "false fails only"
+          },
+          "audit_controls": {
+            "right": 417,
+            "wrong": 183,
+            "refused": 0,
+            "false_pass": 95,
+            "false_fail": 88,
+            "direction": "MIXED"
+          },
+          "unique_user_id": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "workforce_termination": {
+            "right": 407,
+            "wrong": 193,
+            "refused": 0,
+            "false_pass": 33,
+            "false_fail": 160,
+            "direction": "MIXED"
+          },
+          "business_associate": {
+            "right": 594,
+            "wrong": 6,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 6,
+            "direction": "false fails only"
+          },
+          "de_identification": {
+            "right": 321,
+            "wrong": 279,
+            "refused": 0,
+            "false_pass": 279,
+            "false_fail": 0,
+            "direction": "false passes only"
+          }
+        },
+        "v2_definition_aware": {
+          "encryption_at_rest": {
+            "right": 221,
+            "wrong": 0,
+            "refused": 379,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "audit_controls": {
+            "right": 221,
+            "wrong": 0,
+            "refused": 379,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "unique_user_id": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "workforce_termination": {
+            "right": 221,
+            "wrong": 0,
+            "refused": 379,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "business_associate": {
+            "right": 221,
+            "wrong": 0,
+            "refused": 379,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "de_identification": {
+            "right": 74,
+            "wrong": 0,
+            "refused": 526,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v4_minimal": {
+          "encryption_at_rest": {
+            "right": 462,
+            "wrong": 0,
+            "refused": 138,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "audit_controls": {
+            "right": 287,
+            "wrong": 0,
+            "refused": 313,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "unique_user_id": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "workforce_termination": {
+            "right": 221,
+            "wrong": 0,
+            "refused": 379,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "business_associate": {
+            "right": 552,
+            "wrong": 0,
+            "refused": 48,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "de_identification": {
+            "right": 345,
+            "wrong": 0,
+            "refused": 255,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v3_with_intake": {
+          "encryption_at_rest": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "audit_controls": {
+            "right": 391,
+            "wrong": 0,
+            "refused": 209,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "unique_user_id": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "workforce_termination": {
+            "right": 391,
+            "wrong": 0,
+            "refused": 209,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "business_associate": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "de_identification": {
+            "right": 74,
+            "wrong": 0,
+            "refused": 526,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        }
+      },
+      "by_tier": {
+        "v1_naive": {
+          "questionnaire": {
+            "decided": 1254,
+            "wrong": 273,
+            "refused": 0
+          },
+          "config_export": {
+            "decided": 1020,
+            "wrong": 300,
+            "refused": 0
+          },
+          "document_review": {
+            "decided": 882,
+            "wrong": 144,
+            "refused": 0
+          },
+          "full_assessment": {
+            "decided": 444,
+            "wrong": 74,
+            "refused": 0
+          }
+        },
+        "v2_definition_aware": {
+          "questionnaire": {
+            "decided": 209,
+            "wrong": 0,
+            "refused": 1045
+          },
+          "config_export": {
+            "decided": 170,
+            "wrong": 0,
+            "refused": 850
+          },
+          "document_review": {
+            "decided": 735,
+            "wrong": 0,
+            "refused": 147
+          },
+          "full_assessment": {
+            "decided": 444,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v4_minimal": {
+          "questionnaire": {
+            "decided": 557,
+            "wrong": 0,
+            "refused": 697
+          },
+          "config_export": {
+            "decided": 625,
+            "wrong": 0,
+            "refused": 395
+          },
+          "document_review": {
+            "decided": 841,
+            "wrong": 0,
+            "refused": 41
+          },
+          "full_assessment": {
+            "decided": 444,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v3_with_intake": {
+          "questionnaire": {
+            "decided": 627,
+            "wrong": 0,
+            "refused": 627
+          },
+          "config_export": {
+            "decided": 850,
+            "wrong": 0,
+            "refused": 170
+          },
+          "document_review": {
+            "decided": 735,
+            "wrong": 0,
+            "refused": 147
+          },
+          "full_assessment": {
+            "decided": 444,
+            "wrong": 0,
+            "refused": 0
+          }
+        }
+      },
+      "refusal_causes": {
+        "risk_assessment_on_file": 758,
+        "alternative_control_documented": 758,
+        "zip3_population": 526,
+        "log_review_evidence": 379,
+        "revocation_sla_met": 379,
+        "conduit_exception_claimed": 379,
+        "vendor_access_type": 379,
+        "log_retention_days": 209,
+        "termination_events": 209,
+        "date_precision": 209,
+        "zip_digits": 209
+      }
+    },
+    "pci_dss": {
+      "regime": "pci_dss",
+      "citation": "PCI DSS v4.0 (subsets of Req 1, 2, 3, 8, 10, 11)",
+      "cases": 600,
+      "rules": 6,
+      "decisions": 3600,
+      "tier_mix": {
+        "config_and_policy": 135,
+        "scanner_output": 210,
+        "qsa_walkthrough": 79,
+        "asset_tag": 176
+      },
+      "checkers": {
+        "v1_naive": {
+          "decided": 3600,
+          "decided_pct": 100.0,
+          "wrong": 528,
+          "wrong_pct_of_decided": 14.7,
+          "refused": 0
+        },
+        "v2_definition_aware": {
+          "decided": 744,
+          "decided_pct": 20.7,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 2856
+        },
+        "v4_minimal": {
+          "decided": 1866,
+          "decided_pct": 51.8,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1734
+        },
+        "v3_with_intake": {
+          "decided": 2300,
+          "decided_pct": 63.9,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 1300
+        }
+      },
+      "per_rule": {
+        "v1_naive": {
+          "network_segmentation": {
+            "right": 476,
+            "wrong": 124,
+            "refused": 0,
+            "false_pass": 61,
+            "false_fail": 63,
+            "direction": "MIXED"
+          },
+          "no_vendor_defaults": {
+            "right": 551,
+            "wrong": 49,
+            "refused": 0,
+            "false_pass": 19,
+            "false_fail": 30,
+            "direction": "MIXED"
+          },
+          "pan_storage": {
+            "right": 597,
+            "wrong": 3,
+            "refused": 0,
+            "false_pass": 2,
+            "false_fail": 1,
+            "direction": "MIXED"
+          },
+          "mfa_into_cde": {
+            "right": 471,
+            "wrong": 129,
+            "refused": 0,
+            "false_pass": 3,
+            "false_fail": 126,
+            "direction": "MIXED"
+          },
+          "log_retention": {
+            "right": 486,
+            "wrong": 114,
+            "refused": 0,
+            "false_pass": 38,
+            "false_fail": 76,
+            "direction": "MIXED"
+          },
+          "vuln_scanning": {
+            "right": 491,
+            "wrong": 109,
+            "refused": 0,
+            "false_pass": 41,
+            "false_fail": 68,
+            "direction": "MIXED"
+          }
+        },
+        "v2_definition_aware": {
+          "network_segmentation": {
+            "right": 79,
+            "wrong": 0,
+            "refused": 521,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "no_vendor_defaults": {
+            "right": 79,
+            "wrong": 0,
+            "refused": 521,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "pan_storage": {
+            "right": 79,
+            "wrong": 0,
+            "refused": 521,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "mfa_into_cde": {
+            "right": 79,
+            "wrong": 0,
+            "refused": 521,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "log_retention": {
+            "right": 214,
+            "wrong": 0,
+            "refused": 386,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vuln_scanning": {
+            "right": 214,
+            "wrong": 0,
+            "refused": 386,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v4_minimal": {
+          "network_segmentation": {
+            "right": 151,
+            "wrong": 0,
+            "refused": 449,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "no_vendor_defaults": {
+            "right": 349,
+            "wrong": 0,
+            "refused": 251,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "pan_storage": {
+            "right": 418,
+            "wrong": 0,
+            "refused": 182,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "mfa_into_cde": {
+            "right": 353,
+            "wrong": 0,
+            "refused": 247,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "log_retention": {
+            "right": 307,
+            "wrong": 0,
+            "refused": 293,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vuln_scanning": {
+            "right": 288,
+            "wrong": 0,
+            "refused": 312,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v3_with_intake": {
+          "network_segmentation": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "no_vendor_defaults": {
+            "right": 424,
+            "wrong": 0,
+            "refused": 176,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "pan_storage": {
+            "right": 424,
+            "wrong": 0,
+            "refused": 176,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "mfa_into_cde": {
+            "right": 214,
+            "wrong": 0,
+            "refused": 386,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "log_retention": {
+            "right": 424,
+            "wrong": 0,
+            "refused": 176,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vuln_scanning": {
+            "right": 214,
+            "wrong": 0,
+            "refused": 386,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        }
+      },
+      "by_tier": {
+        "v1_naive": {
+          "asset_tag": {
+            "decided": 1056,
+            "wrong": 243,
+            "refused": 0
+          },
+          "scanner_output": {
+            "decided": 1260,
+            "wrong": 132,
+            "refused": 0
+          },
+          "config_and_policy": {
+            "decided": 810,
+            "wrong": 97,
+            "refused": 0
+          },
+          "qsa_walkthrough": {
+            "decided": 474,
+            "wrong": 56,
+            "refused": 0
+          }
+        },
+        "v2_definition_aware": {
+          "asset_tag": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1056
+          },
+          "scanner_output": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1260
+          },
+          "config_and_policy": {
+            "decided": 270,
+            "wrong": 0,
+            "refused": 540
+          },
+          "qsa_walkthrough": {
+            "decided": 474,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v4_minimal": {
+          "asset_tag": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1056
+          },
+          "scanner_output": {
+            "decided": 680,
+            "wrong": 0,
+            "refused": 580
+          },
+          "config_and_policy": {
+            "decided": 712,
+            "wrong": 0,
+            "refused": 98
+          },
+          "qsa_walkthrough": {
+            "decided": 474,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v3_with_intake": {
+          "asset_tag": {
+            "decided": 176,
+            "wrong": 0,
+            "refused": 880
+          },
+          "scanner_output": {
+            "decided": 840,
+            "wrong": 0,
+            "refused": 420
+          },
+          "config_and_policy": {
+            "decided": 810,
+            "wrong": 0,
+            "refused": 0
+          },
+          "qsa_walkthrough": {
+            "decided": 474,
+            "wrong": 0,
+            "refused": 0
+          }
+        }
+      },
+      "refusal_causes": {
+        "stores_processes_transmits": 2316,
+        "connected_to_cde": 2316,
+        "segmentation_validated": 2316,
+        "compensating_control_documented": 1042,
+        "segmentation_test_evidence": 521,
+        "customized_approach_trra": 521,
+        "access_path": 386,
+        "asv_scan_required": 386,
+        "default_accounts_present": 176,
+        "stores_pan": 176,
+        "pan_protection_method": 176,
+        "mfa_enabled": 176,
+        "log_retention_months": 176,
+        "log_immediate_months": 176,
+        "scan_cadence_days": 176,
+        "passing_scan_on_file": 176
+      }
+    },
+    "soc2": {
+      "regime": "soc2",
+      "citation": "AICPA TSC 2017 (rev. 2022 points of focus), subsets of CC6-CC9, A1, C1",
+      "cases": 600,
+      "rules": 6,
+      "decisions": 3600,
+      "tier_mix": {
+        "ticket_export": 182,
+        "period_sample": 139,
+        "auditor_workpapers": 81,
+        "config_snapshot": 198
+      },
+      "checkers": {
+        "v1_naive": {
+          "decided": 3600,
+          "decided_pct": 100.0,
+          "wrong": 1308,
+          "wrong_pct_of_decided": 36.3,
+          "refused": 0
+        },
+        "v2_definition_aware": {
+          "decided": 486,
+          "decided_pct": 13.5,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 3114
+        },
+        "v4_minimal": {
+          "decided": 486,
+          "decided_pct": 13.5,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 3114
+        },
+        "v3_with_intake": {
+          "decided": 1320,
+          "decided_pct": 36.7,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 2280
+        }
+      },
+      "per_rule": {
+        "v1_naive": {
+          "logical_access": {
+            "right": 383,
+            "wrong": 217,
+            "refused": 0,
+            "false_pass": 142,
+            "false_fail": 75,
+            "direction": "MIXED"
+          },
+          "change_management": {
+            "right": 371,
+            "wrong": 229,
+            "refused": 0,
+            "false_pass": 155,
+            "false_fail": 74,
+            "direction": "MIXED"
+          },
+          "monitoring": {
+            "right": 371,
+            "wrong": 229,
+            "refused": 0,
+            "false_pass": 144,
+            "false_fail": 85,
+            "direction": "MIXED"
+          },
+          "vendor_management": {
+            "right": 373,
+            "wrong": 227,
+            "refused": 0,
+            "false_pass": 151,
+            "false_fail": 76,
+            "direction": "MIXED"
+          },
+          "availability_capacity": {
+            "right": 392,
+            "wrong": 208,
+            "refused": 0,
+            "false_pass": 73,
+            "false_fail": 135,
+            "direction": "MIXED"
+          },
+          "confidential_disposal": {
+            "right": 402,
+            "wrong": 198,
+            "refused": 0,
+            "false_pass": 62,
+            "false_fail": 136,
+            "direction": "MIXED"
+          }
+        },
+        "v2_definition_aware": {
+          "logical_access": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "change_management": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "monitoring": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vendor_management": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "availability_capacity": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "confidential_disposal": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v4_minimal": {
+          "logical_access": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "change_management": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "monitoring": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vendor_management": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "availability_capacity": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "confidential_disposal": {
+            "right": 81,
+            "wrong": 0,
+            "refused": 519,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v3_with_intake": {
+          "logical_access": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "change_management": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "monitoring": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "vendor_management": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "availability_capacity": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "confidential_disposal": {
+            "right": 220,
+            "wrong": 0,
+            "refused": 380,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        }
+      },
+      "by_tier": {
+        "v1_naive": {
+          "config_snapshot": {
+            "decided": 1188,
+            "wrong": 376,
+            "refused": 0
+          },
+          "ticket_export": {
+            "decided": 1092,
+            "wrong": 416,
+            "refused": 0
+          },
+          "period_sample": {
+            "decided": 834,
+            "wrong": 325,
+            "refused": 0
+          },
+          "auditor_workpapers": {
+            "decided": 486,
+            "wrong": 191,
+            "refused": 0
+          }
+        },
+        "v2_definition_aware": {
+          "config_snapshot": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1188
+          },
+          "ticket_export": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1092
+          },
+          "period_sample": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 834
+          },
+          "auditor_workpapers": {
+            "decided": 486,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v4_minimal": {
+          "config_snapshot": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1188
+          },
+          "ticket_export": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1092
+          },
+          "period_sample": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 834
+          },
+          "auditor_workpapers": {
+            "decided": 486,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v3_with_intake": {
+          "config_snapshot": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1188
+          },
+          "ticket_export": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 1092
+          },
+          "period_sample": {
+            "decided": 834,
+            "wrong": 0,
+            "refused": 0
+          },
+          "auditor_workpapers": {
+            "decided": 486,
+            "wrong": 0,
+            "refused": 0
+          }
+        }
+      },
+      "refusal_causes": {
+        "categories_in_scope": 3114,
+        "subservice_treatment": 3114,
+        "subservice_owned": 3114,
+        "cuec_documented": 3114,
+        "report_type": 2280,
+        "period_days": 2280,
+        "control_operated_sample": 1188,
+        "sample_exceptions": 1188
+      }
+    },
+    "card_act": {
+      "regime": "card_act",
+      "citation": "Credit CARD Act of 2009 via Reg Z: 12 CFR 1026.53, 1026.5(b)(2)(ii), 1026.56",
+      "cases": 600,
+      "rules": 3,
+      "decisions": 1800,
+      "tier_mix": {
+        "balance_snapshot": 186,
+        "statement_export": 177,
+        "exam_file": 77,
+        "event_log": 160
+      },
+      "checkers": {
+        "v1_naive": {
+          "decided": 1800,
+          "decided_pct": 100.0,
+          "wrong": 372,
+          "wrong_pct_of_decided": 20.7,
+          "refused": 0
+        },
+        "v2_definition_aware": {
+          "decided": 905,
+          "decided_pct": 50.3,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 895
+        },
+        "v4_minimal": {
+          "decided": 905,
+          "decided_pct": 50.3,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 895
+        },
+        "v3_with_intake": {
+          "decided": 1800,
+          "decided_pct": 100.0,
+          "wrong": 0,
+          "wrong_pct_of_decided": 0.0,
+          "refused": 0
+        }
+      },
+      "per_rule": {
+        "v1_naive": {
+          "payment_allocation": {
+            "right": 337,
+            "wrong": 263,
+            "refused": 0,
+            "false_pass": 112,
+            "false_fail": 151,
+            "direction": "MIXED"
+          },
+          "statement_timing": {
+            "right": 561,
+            "wrong": 39,
+            "refused": 0,
+            "false_pass": 39,
+            "false_fail": 0,
+            "direction": "false passes only"
+          },
+          "over_limit_opt_in": {
+            "right": 530,
+            "wrong": 70,
+            "refused": 0,
+            "false_pass": 52,
+            "false_fail": 18,
+            "direction": "MIXED"
+          }
+        },
+        "v2_definition_aware": {
+          "payment_allocation": {
+            "right": 414,
+            "wrong": 0,
+            "refused": 186,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "statement_timing": {
+            "right": 414,
+            "wrong": 0,
+            "refused": 186,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "over_limit_opt_in": {
+            "right": 77,
+            "wrong": 0,
+            "refused": 523,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v4_minimal": {
+          "payment_allocation": {
+            "right": 414,
+            "wrong": 0,
+            "refused": 186,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "statement_timing": {
+            "right": 414,
+            "wrong": 0,
+            "refused": 186,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "over_limit_opt_in": {
+            "right": 77,
+            "wrong": 0,
+            "refused": 523,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        },
+        "v3_with_intake": {
+          "payment_allocation": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "statement_timing": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          },
+          "over_limit_opt_in": {
+            "right": 600,
+            "wrong": 0,
+            "refused": 0,
+            "false_pass": 0,
+            "false_fail": 0,
+            "direction": "never wrong"
+          }
+        }
+      },
+      "by_tier": {
+        "v1_naive": {
+          "balance_snapshot": {
+            "decided": 558,
+            "wrong": 107,
+            "refused": 0
+          },
+          "statement_export": {
+            "decided": 531,
+            "wrong": 119,
+            "refused": 0
+          },
+          "event_log": {
+            "decided": 480,
+            "wrong": 103,
+            "refused": 0
+          },
+          "exam_file": {
+            "decided": 231,
+            "wrong": 43,
+            "refused": 0
+          }
+        },
+        "v2_definition_aware": {
+          "balance_snapshot": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 558
+          },
+          "statement_export": {
+            "decided": 354,
+            "wrong": 0,
+            "refused": 177
+          },
+          "event_log": {
+            "decided": 320,
+            "wrong": 0,
+            "refused": 160
+          },
+          "exam_file": {
+            "decided": 231,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v4_minimal": {
+          "balance_snapshot": {
+            "decided": 0,
+            "wrong": 0,
+            "refused": 558
+          },
+          "statement_export": {
+            "decided": 354,
+            "wrong": 0,
+            "refused": 177
+          },
+          "event_log": {
+            "decided": 320,
+            "wrong": 0,
+            "refused": 160
+          },
+          "exam_file": {
+            "decided": 231,
+            "wrong": 0,
+            "refused": 0
+          }
+        },
+        "v3_with_intake": {
+          "balance_snapshot": {
+            "decided": 558,
+            "wrong": 0,
+            "refused": 0
+          },
+          "statement_export": {
+            "decided": 531,
+            "wrong": 0,
+            "refused": 0
+          },
+          "event_log": {
+            "decided": 480,
+            "wrong": 0,
+            "refused": 0
+          },
+          "exam_file": {
+            "decided": 231,
+            "wrong": 0,
+            "refused": 0
+          }
+        }
+      },
+      "refusal_causes": {
+        "opt_in_on_file": 523,
+        "opt_in_revoked_day": 523,
+        "over_limit_fee_charged": 363,
+        "fee_charged_day": 363,
+        "allocation_applied": 186,
+        "statement_sent_day": 186,
+        "due_day": 186
+      }
+    }
+  },
+  "amendments": [
+    {
+      "regime": "zoning",
+      "amendment": "height limit lowered from 30 ft to 28 ft",
+      "note": "a downzoning amendment, the commonest kind there is",
+      "issued_decisions": 684,
+      "flipped_to_fail": 30,
+      "flipped_to_pass": 0,
+      "issued_decisions_now_wrong": 30,
+      "now_wrong_pct": 4.4
+    },
+    {
+      "regime": "hipaa",
+      "amendment": "Safe Harbor ZIP3 population floor raised from 20,000 to 30,000",
+      "note": "hypothetical: the floor itself is set in 164.514(b)(2)(i)(B)",
+      "issued_decisions": 1558,
+      "flipped_to_fail": 4,
+      "flipped_to_pass": 0,
+      "issued_decisions_now_wrong": 4,
+      "now_wrong_pct": 0.3
+    },
+    {
+      "regime": "pci_dss",
+      "amendment": "immediately-available log window raised from 3 months to 6",
+      "note": "hypothetical revision to Req 10.5.1",
+      "issued_decisions": 744,
+      "flipped_to_fail": 15,
+      "flipped_to_pass": 0,
+      "issued_decisions_now_wrong": 15,
+      "now_wrong_pct": 2.0
+    },
+    {
+      "regime": "soc2",
+      "amendment": "minimum Type II sample raised from 25 to 40",
+      "note": "a firm-level methodology change, not a TSC change",
+      "issued_decisions": 486,
+      "flipped_to_fail": 44,
+      "flipped_to_pass": 0,
+      "issued_decisions_now_wrong": 44,
+      "now_wrong_pct": 9.1
+    },
+    {
+      "regime": "card_act",
+      "amendment": "statement delivery window raised from 21 days to 25",
+      "note": "hypothetical amendment to 1026.5(b)(2)(ii)",
+      "issued_decisions": 905,
+      "flipped_to_fail": 137,
+      "flipped_to_pass": 0,
+      "issued_decisions_now_wrong": 137,
+      "now_wrong_pct": 15.1
+    }
+  ]
+}

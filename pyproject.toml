@@ -1,0 +1,17 @@
+[project]
+name = "ai-compliance-checker"
+version = "0.1.0"
+description = "What fraction of a regulatory decision can be automated without ever being wrong -- measured across five regimes"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "James Kelly" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+real = ["anthropic>=0.60"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,46 @@
+PRE-REGISTERED READING -- written BEFORE the paid run, 2026-08-12
+================================================================================
+Run: 2 models (claude-sonnet-5, gpt-5.4) x 2 regimes (hipaa, soc2) x 40 cases
+     = 160 calls, $2.82 estimated.
+
+THE PRIMARY MEASUREMENT. Restricted to rule decisions where the honest checker
+REFUSED -- the evidence provably cannot support a verdict. The model was given
+the same evidence, the rule including every qualifier, and an explicit
+"insufficient_evidence" option with an explanation of when to use it.
+
+  IF THE MODEL REFUSES MOST OF THEM (>= 70%)
+    A model handed the rule text and an explicit refusal option largely
+    declines when it should. That is a FRIENDLIER result than this repository
+    expects and it must be reported as the headline if it happens: the
+    honest-checker machinery would then be a way of AUDITING a model rather
+    than a replacement for one.
+
+  IF THE MODEL DECIDES MOST OF THEM (>= 60%)
+    It behaves like the naive checker with better prose. The interesting
+    number is then the error rate on those decisions, and the comparison is
+    against the naive checker's rate on the same regime (hipaa 22.0%,
+    soc2 36.3%).
+
+  IN BETWEEN (30-60% refused)
+    Report the rate and do not characterize it as either. Partial is partial.
+
+THE CONTROL, WITHOUT WHICH THE PRIMARY IS MEANINGLESS. Restricted to decisions
+the honest checker DID make: does the model agree? A model that answers
+"insufficient_evidence" to everything scores perfectly on the primary and is
+useless. High refusal on the primary is only a good result if agreement here
+stays high. If both are high-refusal, the model is abstaining indiscriminately
+and neither number means what it looks like.
+
+ON THE TWO MODELS. Any difference between them is a difference between two
+models, not between two providers. This portfolio has already published a
+two-point comparison that looked like a provider difference and was killed by
+a third data point; the same restraint applies here and no provider claim will
+be made from n=2.
+
+ON PARSING. A rule the model omits from its JSON is recorded as unparseable,
+NOT as a refusal. Counting an omission as a refusal would inflate the primary
+measurement, which is the one this run is being bought to establish.
+
+WHAT WOULD INVALIDATE THE RUN. If either model returns unparseable output on
+more than roughly 10% of calls, the comparison is measuring output formatting
+rather than compliance judgment and the result should be reported as that.
