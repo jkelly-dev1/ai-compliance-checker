@@ -15,7 +15,10 @@ ratio is reported.
 Every Definition here exists because it changes an answer. Nothing is included
 for flavor. Each carries the field it depends on, and a submittal that lacks
 that field cannot be decided under this ordinance, which is the precondition
-machinery in acc/checkers.py, not a limitation of it.
+machinery in acc/zoning.py working, not a limitation of it. RULE_PRECONDITIONS
+below is derived from these `requires` tuples rather than written out a second
+time, so a definition that stops needing a field stops gating on it in the
+same edit.
 """
 
 from __future__ import annotations
@@ -92,7 +95,13 @@ DEFINITIONS = (
         "flag_lot_reference_line",
         "On a flag lot, setbacks are measured from the boundary of the "
         "buildable portion, not from the end of the access strip.",
-        ("lot_type", "access_strip_ft"), "setback"),
+        # access_strip_ft is not required here. The wall polygon already
+        # gives distances measured from the buildable boundary, so knowing the
+        # lot is a flag lot is all this definition needs; the length of the
+        # strip is what the coverage rule needs, and coverage declares and
+        # reads it. Requiring it here would refuse flag-lot setbacks for want
+        # of a number that cannot move the answer.
+        ("lot_type",), "setback"),
     Definition(
         "height_datum_and_target",
         "Height is measured from the GRADE PLANE to the MEAN height between "

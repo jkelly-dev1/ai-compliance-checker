@@ -23,13 +23,13 @@ define that way.
   violations, and an in-scope connected system left out produces a clean report
   over an unexamined attack path.
 
-THE SECOND TRAP, which corroborates HIPAA rather than repeating it. A
-requirement met by a COMPENSATING CONTROL is met. v4.0 also adds the
-CUSTOMIZED APPROACH, where an entity meets the stated objective by other means
-with a documented targeted risk analysis. Both are legitimate, both live in
-documents, and neither is visible to a scanner, so "control absent" is not
-"requirement failed", exactly as "encryption off" was not a HIPAA violation on
-its own. Two unrelated regimes, one shape.
+The second trap corroborates HIPAA without repeating it. A requirement met by
+a compensating control is met. v4.0 also adds the customized approach, where
+an entity meets the stated objective by other means with a documented targeted
+risk analysis. Both are legitimate, both live in documents, and neither is
+visible to a scanner, so "control absent" is not "requirement failed", exactly
+as "encryption off" was not a HIPAA violation on its own. Two unrelated
+regimes, one shape.
 
 THE THIRD, the one people get wrong in the other direction: not applicable is
 not the same as not tested. A requirement that genuinely does not apply is
@@ -69,18 +69,34 @@ RULES = tuple(LIMITS)
 SCOPE_INPUTS = ("stores_processes_transmits", "connected_to_cde",
                 "segmentation_validated")
 
+# The two documented alternatives to meeting a requirement directly. They are
+# one input, not two, because the predicate that reads them is one `or` and it
+# reads both arms. Naming them together here is what stops a rule declaring
+# half of a predicate it evaluates whole.
+ALT_INPUTS = ("compensating_control_documented", "customized_approach_trra")
+
 RULE_PRECONDITIONS = {
     "network_segmentation": SCOPE_INPUTS + ("segmentation_test_evidence",),
-    "no_vendor_defaults": SCOPE_INPUTS + ("default_accounts_present",
-                                          "compensating_control_documented"),
-    "pan_storage": SCOPE_INPUTS + ("stores_pan", "pan_protection_method",
-                                   "customized_approach_trra"),
-    "mfa_into_cde": SCOPE_INPUTS + ("mfa_enabled", "access_path",
-                                    "compensating_control_documented"),
+    # ALT_INPUTS, both fields, on every rule that has an alternative arm. The
+    # `alt` predicate reads both (see check_definition_aware), so a rule naming
+    # only one would declare a set it does not honor: handed a submission
+    # carrying every field it asked for, it could answer FAIL where the truth
+    # is PASS, because `.get(..., False)` supplies a default for the field it
+    # did not ask for. No tier in the shipped corpus carries one of the two
+    # without the other, but that is a property of the corpus, not of the
+    # rule.
+    "no_vendor_defaults": SCOPE_INPUTS + ("default_accounts_present",) + ALT_INPUTS,
+    "pan_storage": SCOPE_INPUTS + ("stores_pan",
+                                   "pan_protection_method") + ALT_INPUTS,
+    "mfa_into_cde": SCOPE_INPUTS + ("mfa_enabled", "access_path") + ALT_INPUTS,
     "log_retention": SCOPE_INPUTS + ("log_retention_months",
                                      "log_immediate_months"),
-    "vuln_scanning": SCOPE_INPUTS + ("scan_cadence_days", "passing_scan_on_file",
-                                     "asv_scan_required"),
+    # asv_scan_required is not a precondition. Whether an external scan is
+    # required does not change whether the cadence and the passing scan on
+    # file satisfy the requirement, and the rule does not read it. It stays in
+    # the population and in the tier table as a fact a submission carries.
+    "vuln_scanning": SCOPE_INPUTS + ("scan_cadence_days",
+                                     "passing_scan_on_file"),
 }
 
 # Rules that a compensating control or the customized approach can satisfy.
@@ -162,7 +178,7 @@ class Assessment:
 
     system_id: str
     evidence_tier: str
-    # ALWAYS PRESENT, and always the wrong question on its own: the tag someone
+    # Always present, and always the wrong question on its own: the tag someone
     # put on the asset in the CMDB.
     tagged_pci: bool
     fields: dict = field(default_factory=dict)
@@ -174,6 +190,27 @@ class Assessment:
 EVIDENCE_TIERS = ("asset_tag", "scanner_output", "config_and_policy",
                   "qsa_walkthrough")
 TIER_WEIGHTS = (0.29, 0.34, 0.24, 0.13)
+
+# Every fact a submission can carry. One tuple, read by the population that
+# builds a submission and by the richest evidence tier, because "everything"
+# has to mean everything.
+#
+# Written out, not derived from RULE_PRECONDITIONS. Evidence a submission can
+# carry is a fact about the population; what a rule requires is a fact about
+# the rule. Derived from the second, the first would agree only by
+# coincidence: tightening a precondition set would remove a field from the
+# world, including one the naive checker reads (asv_scan_required), and a
+# change to the honest checker would move the naive checker's published error
+# rate as a side effect. tests/test_invariants.py::
+# test_some_evidence_tier_carries_everything_the_population_has pins it.
+SUBMITTABLE_FIELDS = (
+    "stores_processes_transmits", "connected_to_cde",
+    "segmentation_validated", "segmentation_test_evidence",
+    "default_accounts_present", "stores_pan", "pan_protection_method",
+    "mfa_enabled", "access_path", "log_retention_months",
+    "log_immediate_months", "scan_cadence_days", "passing_scan_on_file",
+    "asv_scan_required", "compensating_control_documented",
+    "customized_approach_trra")
 
 TIER_FIELDS = {
     # Someone labeled the asset. Nothing else.
@@ -191,8 +228,7 @@ TIER_FIELDS = {
                           "log_immediate_months", "scan_cadence_days",
                           "passing_scan_on_file", "asv_scan_required"),
     # A QSA walked it. Now the evidence and the documented alternatives exist.
-    "qsa_walkthrough": tuple(sorted({f for fs in RULE_PRECONDITIONS.values()
-                                     for f in fs})),
+    "qsa_walkthrough": SUBMITTABLE_FIELDS,
 }
 
 # What a changed intake would demand. Every one is a DOCUMENT or a TEST RESULT
@@ -233,14 +269,7 @@ def make_system(index: int) -> System:
 
 
 def make_assessment(sy: System) -> Assessment:
-    available = {k: getattr(sy, k) for k in (
-        "stores_processes_transmits", "connected_to_cde",
-        "segmentation_validated", "segmentation_test_evidence",
-        "default_accounts_present", "stores_pan", "pan_protection_method",
-        "mfa_enabled", "access_path", "log_retention_months",
-        "log_immediate_months", "scan_cadence_days", "passing_scan_on_file",
-        "asv_scan_required", "compensating_control_documented",
-        "customized_approach_trra")}
+    available = {k: getattr(sy, k) for k in SUBMITTABLE_FIELDS}
     carried = {k: v for k, v in available.items()
                if k in TIER_FIELDS[sy.evidence_tier]}
     # The CMDB tag correlates with scope and is not scope. It is right about

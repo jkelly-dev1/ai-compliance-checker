@@ -51,8 +51,11 @@ from acc import hipaa, soc2                                     # noqa: E402
 from acc.regime import REGIMES                                  # noqa: E402
 from acc.verdict import FAIL, PASS, REFUSE                      # noqa: E402
 
-# USD per million tokens. Dated list prices verified 2026-08-11 against each
-# provider's own pricing page; see the operator's price files. A DATED CLAIM.
+# USD per million tokens. Dated list prices, read on 2026-08-11 from each
+# provider's own published pricing page. A DATED CLAIM: list prices change,
+# this table does not follow them, and PRICING_VERIFIED below is the date to
+# check it against. Every cost figure in README.md and SAMPLE_RUN.md is
+# derived from these numbers and the token counts stored in audit/.
 PRICING = {
     "claude-sonnet-5": {"in": 2.00, "out": 10.00},
     "claude-opus-5": {"in": 5.00, "out": 25.00},
@@ -63,20 +66,27 @@ PRICING_VERIFIED = "2026-08-11"
 PROVIDER = {m: ("openai" if m.startswith("gpt-") else "anthropic")
             for m in PRICING}
 
-# Output tokens per call, by provider. OpenAI reasoning models bill thinking
-# tokens as output, so one constant cannot serve both. Rounded above what a
-# sibling repository measured, because an estimate that errs low is the one
-# that spends money nobody approved.
+# Output tokens per call, by provider, for the PRE-FLIGHT COST ESTIMATE only.
+# OpenAI reasoning models bill thinking tokens as output, so one constant
+# cannot serve both. Both are rounded UP from what the stored runs in audit/
+# actually used, because an estimate that errs low is the one that spends
+# money nobody approved. The figures reported afterwards come from the token
+# counts the providers return, never from these.
 OUTPUT_TOKENS = {"anthropic": 1600, "openai": 2200}
 PROMPT_TOKENS = 1500
 
-# The cap that invalidated the first run. It was 1500, claude-sonnet-5
-# averaged 1,200 output tokens, and 65% of its SOC 2 replies came back
-# unparseable. Six rules with six reasons does not fit, so well-formed JSON
-# was cut mid-object and counted as a model failure. That is the SAME defect a
-# sibling repository documented two projects earlier, reintroduced here while
-# writing about instruments that mislead. Knowing a failure mode is not
-# noticing an instance of it.
+# The first run's cap was 1500, against a model averaging 1,948 output tokens
+# on this prompt (see README.md, "One run was invalidated by its own
+# pre-registration"). Six rules with six reasons does not fit, so well-formed
+# JSON was cut mid-object and counted as a model failure.
+#
+# 4000 is not always enough either, and the artifact says so. Seven records in
+# audit/real_run_soc2.json carry stop_reason "incomplete" at output_tokens of
+# exactly this number, one contiguous call of forty, and none of them parsed.
+# That is the 2.5% in the re-run's parse rate. It sits inside the
+# pre-registered 10% threshold, so the run stands; it is not eliminated, and
+# raising this constant further without re-running would only make the
+# artifact and the code disagree.
 MAX_OUTPUT_TOKENS = 4000
 
 REGIME_MODULES = {"hipaa": hipaa, "soc2": soc2}
@@ -198,7 +208,22 @@ def main() -> int:
     ap.add_argument("--max-cost", type=float, default=6.00)
     ap.add_argument("--confirm", action="store_true")
     ap.add_argument("--out", type=Path, default=Path("audit/real_run.json"))
+    # Writing over a stored run is how the most creditable artifact in this
+    # repository would disappear. audit/real_run.json is the run that was
+    # invalidated by its own pre-registration and kept, and it is also this
+    # flag's default, so the documented --confirm command with no arguments
+    # must refuse instead of overwriting the evidence it is cited for.
+    ap.add_argument("--force", action="store_true",
+                    help="overwrite --out if it already exists")
     args = ap.parse_args()
+
+    if args.out.exists() and not args.force and args.confirm:
+        print(f"REFUSING TO START: {args.out} already exists.\n"
+              f"  A stored run is evidence and this would spend money to "
+              f"destroy it.\n"
+              f"  Write somewhere else with --out, or pass --force if "
+              f"replacing it is the intent.")
+        return 2
 
     for m in args.models:
         if m not in PRICING:
@@ -321,6 +346,30 @@ def main() -> int:
 
 
 def report(records, models, regimes) -> None:
+    # The parse rate first, because the pre-registration's validity rule turns
+    # on it and both tables below drop every row whose model_verdict is empty.
+    # An unparsed reply leaves the tables and shrinks their denominators, so a
+    # run can look tidy in both while a third of it never came back: the first
+    # SOC 2 run shows 72 refused-by-honest rows where there were 198.
+    print("\nPARSE RATE AND STOP REASONS -- the pre-registration's validity "
+          "rule turns on this")
+    print(f"  {'model':<16} {'regime':<8} {'records':>8} {'unparsed':>10} "
+          f"{'rate':>8}   stop reasons")
+    for model in models:
+        for regime in regimes:
+            rows = [r for r in records
+                    if r.get("model") == model and r.get("regime") == regime]
+            if not rows:
+                continue
+            unparsed = sum(1 for r in rows if not r.get("model_verdict"))
+            stops = Counter(r.get("stop_reason") or "<none>" for r in rows)
+            summary = ", ".join(f"{k} {v}" for k, v in stops.most_common())
+            print(f"  {model:<16} {regime:<8} {len(rows):>8} "
+                  f"{unparsed:>10} {unparsed / len(rows) * 100:>7.1f}%   "
+                  f"{summary}")
+    print("  Rows with no parsed verdict are absent from both tables below "
+          "and from their denominators.")
+
     print("\nWHERE THE HONEST CHECKER REFUSED -- the evidence cannot support "
           "a decision")
     print(f"  {'model':<16} {'regime':<8} {'refused too':>12} "

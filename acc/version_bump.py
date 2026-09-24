@@ -52,11 +52,11 @@ BUMPS = {
         "apply": lambda: _patch_dict("acc.ordinance", "LIMITS", "height_ft", 28.0),
     },
     "hipaa": {
-        # FIRST CHOICE WAS 20,000 -> 25,000 and it moved nothing, because this
-        # corpus carries no ZIP3 population between those two numbers. A
-        # threshold amendment only bites where the population has mass in the
-        # band it moved across, which is worth knowing before anyone reports
-        # that a regime is stable under revision.
+        # A 20,000 -> 25,000 amendment would move nothing, because this corpus
+        # carries no ZIP3 population between those two numbers. A threshold
+        # amendment only bites where the population has mass in the band it
+        # moves across, which is worth knowing before anyone reports that a
+        # regime is stable under revision.
         "what": "Safe Harbor ZIP3 population floor raised from 20,000 to 30,000",
         "cite": "hypothetical: the floor itself is set in 164.514(b)(2)(i)(B)",
         "apply": lambda: _patch_attr("acc.hipaa", "ZIP3_POPULATION_FLOOR", 30000),

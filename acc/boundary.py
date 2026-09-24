@@ -34,14 +34,19 @@ CHECKERS = ("v1_naive", "v2_definition_aware", "v4_minimal",
 
 
 def measure(reg: Regime, n: int) -> dict:
-    """Run all three checkers over `n` cases of one regime."""
+    """Run all four checkers in CHECKERS over `n` cases of one regime."""
     tally = {c: Counter() for c in CHECKERS}
     per_rule = {c: {r: Counter() for r in reg.rules} for c in CHECKERS}
     by_tier = {c: {t: Counter() for t in reg.evidence_tiers} for c in CHECKERS}
     refusal_causes = Counter()
     tier_counts = Counter()
 
-    minimal = make_checker(reg)
+    # The same n the measurement runs at. v4's enumerable domains are read off
+    # the corpus, so reading them off a different-sized corpus would give the
+    # checker an idea of what a field can hold taken from a population that is
+    # not the one under test. A field can have exactly MAX_DOMAIN distinct
+    # values at 400 cases and more at 600.
+    minimal = make_checker(reg, n)
 
     for truth_obj, sub in reg.corpus(n):
         truth = reg.truth_of(truth_obj)

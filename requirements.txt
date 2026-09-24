@@ -1,3 +1,6 @@
 # The measurement and the test suite need NOTHING outside the standard library.
-# This file exists for the paid leg, which has not been run yet.
+# This file exists for the paid leg in scripts/real_run.py, whose results are
+# stored in audit/ and are not regenerated. Both providers are listed because
+# that script's default --models names one model from each.
 anthropic>=0.60
+openai>=1.40

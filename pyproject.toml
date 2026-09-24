@@ -10,7 +10,10 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
-real = ["anthropic>=0.60"]
+# Both providers. The default --models of scripts/real_run.py is
+# claude-sonnet-5 and gpt-5.4, so the documented paid command imports
+# `openai` as well as `anthropic`.
+real = ["anthropic>=0.60", "openai>=1.40"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

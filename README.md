@@ -50,9 +50,9 @@ comes from so the encoding can be argued with.
 ```
   regime          v1 naive    v2 all-precond        v4 minimal   v3 intake
   ------------------------------------------------------------------------
-  zoning     wrong  20.2%     28.5% dec         28.5% dec         57.9%
-  hipaa      wrong  22.0%     43.3% dec         68.5% dec         73.8%
-  pci_dss    wrong  14.7%     20.7% dec         51.8% dec         63.9%
+  zoning     wrong  24.9%     28.5% dec         28.5% dec         57.9%
+  hipaa      wrong  22.0%     43.3% dec         68.5% dec         79.6%
+  pci_dss    wrong  14.7%     20.7% dec         51.8% dec         69.7%
   soc2       wrong  36.3%     13.5% dec         13.5% dec         36.7%
   card_act   wrong  20.7%     50.3% dec         50.3% dec        100.0%
 ```
@@ -134,16 +134,22 @@ decomposition kills.
 ```
 HIPAA, what the refusals needed, most common first
      758  risk_assessment_on_file
+     758  alternative_control_documented
      526  zip3_population
-     379  alternative_control_documented
      379  log_review_evidence
 ```
 
 Most are documents an entity either has or does not, and requiring them is an
 intake change. `zip3_population` is not: it is an external census fact, and no
 intake form can make an applicant produce it. That distinction is why the
-refusal causes are ranked and reported rather than summarized. One of these is a
-form field and one is a research task.
+refusal causes are ranked and reported rather than summarized. Three of these
+are form fields and one is a research task.
+
+The two at the top are tied because they are the same requirement read twice:
+the addressable arm of `encryption_at_rest` and of `workforce_termination`
+both need an assessment AND a documented alternative, so neither rule can be
+decided without both. A ranking that separated them would be describing two
+problems where there is one.
 
 ## An amendment re-decides cases nobody reopens
 
@@ -168,25 +174,39 @@ amendment says nothing about its blast radius.
 
 ## Claims backed by tests
 
-Every test in `tests/test_invariants.py` runs over all five regimes, because a
-regime joins by writing a module and one registry line, and a test that only
-ran over zoning would let a new regime arrive with a broken encoding and a
-plausible-looking table.
+Of the 17 tests in `tests/test_invariants.py`, 14 run over all five regimes,
+because a regime joins by writing a module and one registry line, and a test
+that only ran over zoning would let a new regime arrive with a broken encoding
+and a plausible-looking table. The three that do not are the mutation check,
+which deliberately breaks one named regime, the registry-construction check,
+which builds no regime at all, and the check that the minimal checker reads its
+domains from the population being measured, which needs only one regime to
+observe the call.
 
 | Claim | Test |
 | --- | --- |
-| The honest checker is never wrong, in every regime, for all three of v2, v4 and v3 | `tests/test_invariants.py::test_the_honest_checker_is_never_wrong` (mutation-checked: `::test_breaking_a_checker_breaks_the_invariant` builds a checker that ignores its preconditions and requires the invariant to fail) |
+| The honest checker is never wrong, in every regime, for all three of v2, v4 and v3 | `tests/test_invariants.py::test_the_honest_checker_is_never_wrong` (mutation-checked: `::test_breaking_a_checker_breaks_the_invariant` binds a checker that ignores its preconditions INTO THE REGISTRY, runs the real `measure()` over it, and requires the same assertion function the test above calls to raise) |
 | The naive checker is wrong somewhere in every regime, so the comparison is not a checker against itself | `tests/test_invariants.py::test_the_naive_checker_is_wrong_somewhere` |
 | The naive checker never refuses, so the contrast is answers-everything against refuses-honestly and not three different questions | `tests/test_invariants.py::test_the_naive_checker_never_refuses` |
 | The honest checker refuses something in every regime, so no decided rate comes from a third verdict nobody used | `tests/test_invariants.py::test_the_honest_checker_refuses_something` |
 | A changed intake form only ever adds evidence: v3 decides at least as much as v2 everywhere | `tests/test_invariants.py::test_intake_only_ever_adds_evidence` |
-| No checker can reach the truth object: strip a submission of every field and every rule refuses | `tests/test_invariants.py::test_a_checker_cannot_reach_the_truth_object` |
+| No checker names a population constructor or touches a `.truth` attribute, read off the source of every checker module | `tests/test_invariants.py::test_no_checker_names_a_truth_constructor` (the dynamic check below cannot see this: a checker that consulted the truth object would answer CORRECTLY, so the measurement and the artifact are both unchanged) |
+| Every precondition set is non-empty: strip a submission of every field and every rule refuses | `tests/test_invariants.py::test_a_checker_cannot_reach_the_truth_object` |
 | Every rule is violated by some case and satisfied by another, so no column is decoration | `tests/test_invariants.py::test_every_rule_is_exercised_in_both_directions` (the guard that caught a units error making zoning's height rule unviolatable) |
 | Every corpus is deterministic, so the tables compare comparable runs | `tests/test_invariants.py::test_the_corpus_is_deterministic` |
-| A rule reads only the fields its precondition set declares | `tests/test_invariants.py::test_no_rule_reads_a_field_it_did_not_declare` (found a real HIPAA bug the day it was written) |
+| A rule reads only the fields its precondition set declares | `tests/test_invariants.py::test_no_rule_reads_a_field_it_did_not_declare` (instruments the submission's `fields` and records every key read, so a `.get(x, default)` read counts) |
+| A rule reads EVERY field its precondition set declares, so a refusal never names evidence the rule would not have looked at | `tests/test_invariants.py::test_every_declared_precondition_is_actually_read` |
+| Both of the above examined every rule in every regime, rather than skipping the ones they could not enumerate | `tests/test_invariants.py::test_the_read_probe_examined_every_rule` |
+| Some evidence tier carries every field the population can supply, so tightening a rule cannot remove evidence from the world | `tests/test_invariants.py::test_some_evidence_tier_carries_everything_the_population_has` |
 | A regime with a rule that declares no preconditions is refused at construction | `tests/test_invariants.py::test_a_regime_missing_preconditions_is_refused_at_construction` |
 | An eave inside its allowance does not encroach, and the naive reading calls it a violation | `tests/test_traps.py::test_an_eave_inside_its_allowance_does_not_encroach` |
 | A corner lot's street side takes the front setback, not the side yard | `tests/test_traps.py::test_a_corner_lot_street_side_takes_the_front_setback` |
+| A projection is charged only against the yard it is built into: a front porch inside its front allowance does not encroach on the side yard | `tests/test_traps.py::test_a_projection_is_charged_only_against_the_yard_it_is_in` |
+| The 30-inch clause of the deck allowance changes an answer, so the definition is not in the table for flavor | `tests/test_traps.py::test_the_deck_height_clause_changes_an_answer` |
+| Every lot type is exercised in both directions, so no conditional branch decides every case it touches the same way | `tests/test_traps.py::test_every_lot_type_is_exercised_in_both_directions` |
+| The constructed population violates at the declared rate, so the design claim about it is measured rather than asserted | `tests/test_traps.py::test_the_population_violation_rate_stays_in_its_band` |
+| A projection whose schedule does not say which yard it is in makes the setback rule refuse, not pass | `tests/test_traps.py::test_a_projection_with_no_stated_yard_is_refused_not_ignored` |
+| The count of invariant tests that run over every regime, stated above, is read off the test file | `tests/test_gates.py::test_the_readme_checker_counts_the_invariant_tests_from_the_file` |
 | Addressable is not optional and not mandatory: encryption off, with an assessment and a documented alternative, is compliant | `tests/test_traps.py::test_encryption_off_with_an_assessment_is_compliant` |
 | A three-digit ZIP below the population floor is not de-identified, and the column-name scan calls it de-identified | `tests/test_traps.py::test_a_three_digit_zip_below_the_population_floor_is_not_de_identified` |
 | Without the population figure the honest answer is a refusal that names the missing field | `tests/test_traps.py::test_without_the_population_figure_the_answer_is_a_refusal` |
@@ -216,21 +236,32 @@ only adds, and that each trap fires in the specific direction the prose claims.
 
 The paid run is absent because it is evidence rather than an invariant. The
 refusal rates, the 17.3% figure and the two models disagreeing with each other
-are what four runs did on one day, at $5.22, and a test that re-ran them would
-cost money on every commit while measuring a model's disposition rather than
-this repository's code. Raw outcomes are in `audit/`, including the run
-that was invalidated by its own pre-registration and kept.
+are what four regime legs did on one day, at $5.23 across the three run files
+in `audit/`, and a test that re-ran them would cost money on every commit while
+measuring a model's disposition rather than this repository's code. Raw
+outcomes are in `audit/`, including the run that was invalidated by its own
+pre-registration and kept.
 
 ## Reproducing
 
 ```
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest -q                                  # 84 tests
+.venv/bin/python -m pytest -q                                  # 121 tests
 .venv/bin/python scripts/offline_demo.py --cases 600 --json audit/offline.json
+.venv/bin/python scripts/check_artifact.py     # audit/offline.json vs the code
+.venv/bin/python scripts/check_readme_numbers.py   # this page vs audit/
 .venv/bin/python scripts/offline_demo.py --regime hipaa
 ```
 
 All of it is free and needs no API key.
+
+The last two are one chain and it only means something whole. `check_artifact.py`
+re-derives `audit/offline.json` from the code in `acc/` at the artifact's own
+case count and requires an exact match; `check_readme_numbers.py` rebuilds every
+figure on this page from that artifact and requires the exact string. Without
+the first, the tests and the demo both stay green while a population constant
+moves every number here, because the invariants this repository asserts (never
+wrong, wrong somewhere, never refuses) hold whatever the rates are.
 
 ## The invariant the whole repository rests on
 
@@ -259,8 +290,9 @@ It has caught two real defects that were invisible inside their own modules:
 - **Whether these encodings are complete.** They are subsets chosen to carry a
   specific trap. A real assessment turns on facts, scope and documentation no
   synthetic record carries.
-- Extraction. Getting fields off a document is a sibling repository's subject,
-  and this one starts from the fields.
+- Extraction. Getting fields off a document is
+  [vlm-extraction-integrity](https://github.com/jkelly-dev1/vlm-extraction-integrity)'s
+  subject, and this one starts from the fields.
 - **Whether a model can do this in general.** Four model-by-regime cells were
   measured (below) and they disagree with each other. Two models is not a
   provider comparison and nothing here is offered as one.
@@ -270,7 +302,9 @@ It has caught two real defects that were invisible inside their own modules:
 Both models were handed the rule as written, the same evidence the honest
 checker sees, and an explicit third verdict, `insufficient_evidence`, with the
 reason it exists spelled out. Withholding that option would have rigged the
-result. 40 cases per regime, both providers, $5.22 total across four runs.
+result. 40 cases per regime, both providers, $5.23 total: three run files in
+`audit/`, covering four regime legs, because `real_run.json` holds HIPAA and
+SOC 2 together and the two re-runs hold one regime each.
 
 Where the honest checker refused; the evidence provably cannot support a
 verdict:
@@ -317,11 +351,22 @@ Written before any call: *if either model returns unparseable output on more
 than roughly 10% of calls, the comparison is measuring output formatting rather
 than compliance judgment.* The first SOC 2 run returned 65% and 15% unparseable.
 It was reported as invalid, not as a finding, and re-run with a larger token
-cap: after which both models parsed at 0.0% and 2.5%, every reply `end_turn` or
-`completed`.
+cap: after which both models failed to parse on 0.0% and 2.5% of calls, well
+inside the threshold, so the re-run stands.
+
+The cap was not eliminated, only moved past the threshold, and the artifact
+says so. In `audit/real_run_soc2.json` the stop reasons are `end_turn` 240 for
+`claude-sonnet-5` and, for `gpt-5.4`, `completed` 234 and `incomplete` 7. All
+seven carry `output_tokens` of exactly 4,000 (`MAX_OUTPUT_TOKENS` in
+`scripts/real_run.py`), and none of them parsed. They are contiguous in the
+record list, so they are one call of forty, and that call is the 2.5%.
 
 The cause was a 1,500-token cap against a model averaging 1,948 output tokens
-on that prompt. 
+on that prompt, and 4,000 was not enough for every reply either. What the
+pre-registration bought was not a run with no truncation; it was a threshold
+decided in advance, a run measured against it, and a stored record per reply
+detailed enough that the remaining truncation is findable from the artifact
+alone. That last part is why this paragraph can be written at all.
 
 ## Layout
 

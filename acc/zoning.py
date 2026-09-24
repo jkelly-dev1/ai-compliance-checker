@@ -104,13 +104,27 @@ def _setback(s: Submittal) -> Verdict:
 
     front = wall["front_ft"]
 
+    # Which yard each projection is actually built into, as the schedule
+    # states it. This is evidence, not knowledge: the checker reads it off the
+    # submittal it was handed, the same way it reads the depths. A schedule
+    # that lists a projection without saying where it is cannot be applied,
+    # so the rule refuses instead of charging that projection nowhere.
+    placement = proj.get("yards", {})
+    unplaced = [k for k in PROJECTION_ALLOWANCES
+                if proj.get(k, 0.0) > 0 and k not in placement]
+    if unplaced:
+        return _refuse("setback", ["projection_schedule"])
+
     # A projection inside its own allowance does not encroach. One outside it
-    # does, by the excess.
+    # does, by the excess. One that is not in this yard at all does not
+    # encroach on it, whatever the allowance table says about the kind.
     def excess(kind: str, yard: str) -> float:
         allow = PROJECTION_ALLOWANCES.get(kind, {"ft": 0.0, "yards": ()})
         depth = proj.get(kind, 0.0)
         if depth <= 0:
             return 0.0
+        if yard not in placement.get(kind, ()):
+            return 0.0                      # not built into this yard
         if yard not in allow["yards"]:
             return depth                    # no allowance in this yard at all
         if kind == "bay_window" and proj.get("bay_width_ft", 0.0) > \

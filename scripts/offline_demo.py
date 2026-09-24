@@ -67,6 +67,43 @@ def cross_regime_table(results: dict) -> str:
     return "\n".join(lines)
 
 
+def build_payload(names, cases, results=None, bumps=None) -> dict:
+    """The published artifact, as an object.
+
+    A function, not a literal inside main(), because
+    scripts/check_artifact.py rebuilds it and compares it against the shipped
+    audit/offline.json. If the gate built its own version of this structure it
+    would be comparing the artifact against a second implementation, and the
+    two could agree while both were wrong. There is one builder and the gate
+    calls it.
+
+    `results` and `bumps` are accepted so a caller that has already run the
+    measurement does not run it twice.
+    """
+    if results is None:
+        results = {n: measure(REGIMES[n], cases) for n in names}
+    if bumps is None:
+        bumps = [measure_bump(n, cases) for n in names if n in BUMPS]
+    return {
+        "note": "Constructed populations with known ground truth. "
+                "Measures the checkers, not any real portfolio. The "
+                "regimes are simplified encodings, not compliance "
+                "products, and nothing here is legal advice.",
+        "cases_per_regime": cases,
+        "ordinance_counts": ordinance.counts(),
+        "regimes": {n: {"citation": REGIMES[n].citation,
+                        "rules": list(REGIMES[n].rules)} for n in names},
+        "boundary": results,
+        "amendments": bumps,
+    }
+
+
+def serialize(payload: dict) -> str:
+    """The exact bytes the artifact is written as, so a comparison of files
+    and a comparison of objects cannot disagree."""
+    return json.dumps(payload, indent=2) + "\n"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cases", type=int, default=600,
@@ -131,18 +168,8 @@ def main() -> int:
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps({
-            "note": "Constructed populations with known ground truth. "
-                    "Measures the checkers, not any real portfolio. The "
-                    "regimes are simplified encodings, not compliance "
-                    "products, and nothing here is legal advice.",
-            "cases_per_regime": args.cases,
-            "ordinance_counts": ordinance.counts(),
-            "regimes": {n: {"citation": REGIMES[n].citation,
-                            "rules": list(REGIMES[n].rules)} for n in names},
-            "boundary": results,
-            "amendments": bumps,
-        }, indent=2) + "\n")
+        args.json.write_text(serialize(build_payload(names, args.cases,
+                                                     results, bumps)))
         print(f"\nwrote {args.json}")
     return 0
 

@@ -105,7 +105,16 @@ def check(reg: Regime, sub, domains: dict) -> dict:
 
 
 def make_checker(reg: Regime, n: int = 400):
-    """Bind a minimal checker for one regime, with its domains precomputed."""
+    """Bind a minimal checker for one regime, with its domains precomputed.
+
+    Pass the same n the measurement uses. The domains are read off the
+    corpus, so a default taken from a smaller corpus describes a different
+    population from the one being graded: a field can be under MAX_DOMAIN in
+    400 cases and over it in 600, and it would then be treated as enumerable
+    while the measurement runs over values it never saw. acc/boundary.py
+    passes its own n. The default is kept only for a caller that wants a
+    checker without a measurement around it.
+    """
     domains = value_domains(reg, n)
 
     def checker(sub):

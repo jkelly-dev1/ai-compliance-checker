@@ -41,6 +41,47 @@ FORMAT_WEIGHTS = (0.23, 0.27, 0.37, 0.13)
 LOT_TYPES = ("interior", "corner", "flag")
 LOT_WEIGHTS = (0.72, 0.17, 0.11)
 
+# Which yard each projection is built into. A porch is at the front door, a
+# deck off the back, a bay window and a cantilevered floor on a side
+# elevation; an eave runs the whole perimeter and so is in every yard.
+#
+# This is a site fact and not an ordinance fact, and the distinction is the
+# reason it is here. PROJECTION_ALLOWANCES says where a projection may be
+# allowed; this says where it actually is. Reading the first as if it were
+# the second charges a front porch in full against the side and rear yards,
+# which is not a strict reading of the allowance but a claim that the porch is
+# in three places at once.
+#
+# It is written once and read three times: by the grading key, by the
+# flattening that produces a submittal, and by the honest checker through the
+# schedule. An implicit model in one function (subtracting the porch from the
+# front distance, say) cannot be compared with an explicit one in another.
+PROJECTION_YARDS = {
+    "eave": ("front", "side", "rear"),
+    "porch": ("front",),
+    "bay_window": ("side",),
+    "deck": ("rear",),
+    "cantilever": ("side",),
+}
+
+# What fraction of the population actually violates, as a band. This is a
+# design property of the population and not a result: a corpus where nothing
+# violates makes every checker look excellent, and one where everything
+# violates makes the error direction per rule unreadable.
+#
+# It is a constant so it can be checked:
+# tests/test_traps.py::test_the_population_violation_rate_stays_in_its_band
+# measures the corpus against it and fails if the population moves.
+#
+# Fractions of `n`, per rule and for at least one rule.
+POPULATION_VIOLATION_BAND = {
+    "any_rule": (0.55, 0.65),
+    "setback": (0.30, 0.38),
+    "height": (0.17, 0.25),
+    "coverage": (0.14, 0.21),
+    "stories": (0.08, 0.15),
+}
+
 # Which fields each format carries. This table is the reason the decidable
 # fraction differs by format. It is data, so a reader can disagree with one
 # cell rather than with a conclusion.
@@ -73,7 +114,9 @@ class Parcel:
     wall_front_ft: float
     wall_side_ft: float
     wall_rear_ft: float
-    projections: dict               # kind -> ft of projection, per yard
+    # kind -> ft of projection, plus a "yards" entry giving the yards each
+    # kind is built into. See PROJECTION_YARDS.
+    projections: dict
     deck_height_in: float
     ridge_height_ft: float
     eave_height_ft: float
@@ -137,15 +180,20 @@ class Parcel:
             # The street-side yard takes the FRONT setback.
             side_req = LIMITS["front_yard_ft"]
 
+        placement = self.projections.get("yards", {})
+
         def encroachment(yard: str) -> float:
             """Feet by which the worst projection into `yard` exceeds its
             allowance. A projection with no allowance in this yard encroaches
-            by its whole depth."""
+            by its whole depth; one that is not in this yard at all does not
+            encroach on it, whatever the allowance table says about it."""
             worst = 0.0
             for kind, allow in PROJECTION_ALLOWANCES.items():
                 depth = self.projections.get(kind, 0.0)
                 if depth <= 0:
                     continue
+                if yard not in placement.get(kind, ()):
+                    continue            # not built into this yard at all
                 if yard not in allow["yards"]:
                     worst = max(worst, depth)
                     continue
@@ -215,6 +263,10 @@ def _projection_depth(rng: random.Random) -> dict:
         out["deck"] = rng.choice((4.0, 6.0, 8.0))
     if rng.random() < 0.12:
         out["cantilever"] = rng.choice((1.5, 2.0))
+    # The schedule on a real drawing says which elevation each projection is
+    # on. The synthetic one says so too, so placement is evidence the checker
+    # is handed, not something it has to know out of band.
+    out["yards"] = {k: PROJECTION_YARDS[k] for k in out if k in PROJECTION_YARDS}
     return out
 
 
@@ -226,13 +278,23 @@ def make_parcel(index: int) -> Parcel:
     lot_area = rng.uniform(6000.0, 14000.0)
     strip = rng.uniform(60.0, 140.0) if lot_type == "flag" else 0.0
 
-    # Built to the envelope: cluster near the minimum, both sides of it.
-    # Built to the envelope but mostly inside it: a minority of submittals
-    # actually violate, which is what a real intake queue looks like. Centered
-    # about 1.5 sigma above each minimum so roughly one parcel in five trips
-    # something, rather than two in three.
+    # Built to the envelope: cluster near the minimum, both sides of it, about
+    # 1.5 sigma above each applicable minimum (applicable because a corner
+    # lot's street side is held to the front setback and must be generated
+    # against that one). A uniform distribution would put most parcels nowhere
+    # near a limit and every checker would look excellent.
+    # What that produces is POPULATION_VIOLATION_BAND, which a test measures.
     wall_front = LIMITS["front_yard_ft"] + abs(rng.gauss(0.0, 2.2)) + 1.2
-    wall_side = LIMITS["side_yard_ft"] + rng.gauss(2.6, 1.8)
+    # On a corner lot the street-side yard takes the front setback, so the
+    # envelope the builder is building to there is the 25 ft one and not the
+    # 5 ft one. Generated against side_yard_ft, a wall 3 to 12 ft off the
+    # boundary could never clear 25 ft, every corner lot would fail setback,
+    # and the corner-lot Definition would be a column of FAIL that proves as
+    # little as a column of PASS. The draw is taken unconditionally so the
+    # parcel sequence is unchanged for every other lot type.
+    side_req = (LIMITS["front_yard_ft"] if lot_type == "corner"
+                else LIMITS["side_yard_ft"])
+    wall_side = side_req + rng.gauss(2.6, 1.8)
     wall_rear = LIMITS["rear_yard_ft"] + rng.gauss(4.0, 3.0)
 
     projections = _projection_depth(rng)
@@ -284,13 +346,26 @@ def make_submittal(p: Parcel) -> Submittal:
     that is the outermost line on a plan and what any extraction picks up. On a
     flag lot the recorded front distance also includes the access strip.
     """
-    eave = p.projections.get("eave", 0.0)
-    porch = p.projections.get("porch", 0.0)
-    front_to_roof = p.wall_front_ft - max(eave, porch)
+    placement = p.projections.get("yards", {})
+
+    def outermost(yard: str) -> float:
+        """How far the outermost line in `yard` sits beyond the wall.
+
+        Derived from the same placement the grading key reads, instead of
+        naming porch, bay and deck again here. Two independent copies of one
+        model can disagree without anything noticing (this function knowing a
+        porch is at the front while the key charges it against every yard),
+        and both sides would look reasonable on their own.
+        """
+        return max((p.projections.get(kind, 0.0)
+                    for kind, yards in placement.items() if yard in yards),
+                   default=0.0)
+
+    front_to_roof = p.wall_front_ft - outermost("front")
     if p.lot_type == "flag":
         front_to_roof += p.access_strip_ft
-    side_to_roof = p.wall_side_ft - max(eave, p.projections.get("bay_window", 0.0))
-    rear_to_roof = p.wall_rear_ft - max(eave, p.projections.get("deck", 0.0))
+    side_to_roof = p.wall_side_ft - outermost("side")
+    rear_to_roof = p.wall_rear_ft - outermost("rear")
 
     available = {
         "wall_polygon": {"front_ft": p.wall_front_ft, "side_ft": p.wall_side_ft,

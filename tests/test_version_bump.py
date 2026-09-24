@@ -12,10 +12,12 @@ N = 300
 
 @pytest.mark.parametrize("name", NAMES)
 def test_every_amendment_actually_moves_something(name):
-    """Guards a defect that already happened. The first HIPAA amendment raised
-    the ZIP3 floor from 20,000 to 25,000 and changed nothing, because the
-    corpus carries no population between those numbers. A threshold that moves
-    across empty space reports 0.0% and reads as stability under revision."""
+    """An amendment must move something, or it measures nothing.
+
+    Raising the HIPAA ZIP3 floor from 20,000 to 25,000 would change nothing,
+    because the corpus carries no population between those numbers. A
+    threshold that moves across empty space reports 0.0% and reads as
+    stability under revision."""
     r = measure_bump(name, N)
     moved = r["flipped_to_fail"] + r["flipped_to_pass"]
     assert moved > 0, (
@@ -35,11 +37,12 @@ def test_a_tightening_never_flips_a_decision_to_pass(name):
 
 @pytest.mark.parametrize("name", NAMES)
 def test_flips_and_now_wrong_agree(name):
-    """The signature of the bug that already happened. The PCI amendment once
-    patched the checker function while acc/regime.py had already bound the
-    original into the registry: truth moved, the checker did not, and the
-    result was 0 flips beside 15 decisions that had become wrong. For a
-    one-directional tightening the two numbers must be equal."""
+    """For a one-directional tightening the two numbers must be equal.
+
+    An amendment that patched the checker module's function after
+    acc/regime.py had bound the original into the registry would move the
+    truth and not the checker, and show zero flips beside decisions that had
+    become wrong."""
     r = measure_bump(name, N)
     assert r["flipped_to_fail"] == r["issued_decisions_now_wrong"]
 

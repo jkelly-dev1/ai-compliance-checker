@@ -39,7 +39,21 @@ REGIMES = ["zoning", "hipaa", "pci_dss", "soc2", "card_act"]
 
 def load():
     with open(os.path.join(ROOT, "audit", "offline.json"), encoding="utf-8") as fh:
-        return json.load(fh)
+        data = json.load(fh)
+    # The artifact must hold every regime this script derives from, and that
+    # is checked here instead of being discovered at the first subscript. A
+    # KeyError out of a list comprehension would name a key, not a problem: a
+    # reader would see a broken script instead of a truncated artifact, and CI
+    # would read the exit code as this script failing for its own reasons.
+    missing = [r for r in REGIMES if r not in (data.get("boundary") or {})]
+    if missing:
+        raise SystemExit(
+            f"audit/offline.json holds no results for {missing}, so this "
+            f"script cannot rebuild the README figures that come from them. "
+            f"The artifact is truncated, not the page. Regenerate it:\n"
+            f"  python3 scripts/offline_demo.py --cases "
+            f"{data.get('cases_per_regime', 600)} --json audit/offline.json")
+    return data
 
 
 def rows_boundary():
@@ -80,13 +94,59 @@ def rows_amendments():
     return out
 
 
+def rows_error_direction():
+    """The per-rule false-pass / false-fail block for HIPAA.
+
+    The page's argument turns on this table ("HIPAA shows all three patterns
+    in one regime"), so it is rebuilt here.
+    """
+    per_rule = load()["boundary"]["hipaa"]["per_rule"]["v1_naive"]
+    return [("direction:hipaa:" + rule,
+             "%s false pass %d false fail %d %s"
+             % (rule, cell["false_pass"], cell["false_fail"],
+                cell["direction"]))
+            for rule, cell in per_rule.items()]
+
+
+def rows_by_tier():
+    """Decidability per evidence tier, for the two regimes the page prints.
+
+    The block is laid out as two columns side by side, so each cell is derived
+    on its own and found as a substring; squash() has already collapsed the
+    column padding by then.
+    """
+    b = load()["boundary"]
+    out = []
+    for regime in ("zoning", "soc2"):
+        m = b[regime]
+        for tier, cell in m["by_tier"]["v2_definition_aware"].items():
+            seen = m["tier_mix"].get(tier, 0)
+            total = seen * m["rules"]
+            pct = (cell["decided"] / total * 100) if total else 0.0
+            out.append(("tier:%s:%s" % (regime, tier),
+                        "%s %.1f%% n=%d" % (tier, pct, seen)))
+    return out
+
+
+def rows_refusal_causes():
+    """What the refusals needed, as a block, so the order is pinned too.
+
+    Deriving each row on its own would accept the right four names with two
+    counts swapped, or a tie reordered, so the four rows are derived as one
+    string and the ranking is part of the claim.
+    """
+    causes = list(load()["boundary"]["hipaa"]["refusal_causes"].items())[:4]
+    return [("refusals:hipaa",
+             " ".join("%d %s" % (count, cause) for cause, count in causes))]
+
+
 def prose_figures():
     d = load()
     b = d["boundary"]
     naive = [b[r]["checkers"]["v1_naive"]["wrong_pct_of_decided"] for r in REGIMES]
     honest = [b[r]["checkers"]["v2_definition_aware"]["decided_pct"] for r in REGIMES]
     out = [
-        # The second headline is the one A compliance program would ACT on, so
+        # The second headline is the one a compliance program would ACT on, so
         # both of its regimes are derived rather than the sentence being
         # trusted to still describe the run.
         ("prose:minimal",
@@ -97,8 +157,27 @@ def prose_figures():
             _trim(b["pci_dss"]["checkers"]["v4_minimal"]["decided_pct"]))),
         ("prose:cases",
          "The run uses %d cases per regime." % d["cases_per_regime"]),
+        ("prose:invariants", _invariant_coverage()),
     ]
     return out
+
+
+def _invariant_coverage():
+    """How many tests in tests/test_invariants.py run over every regime.
+
+    Read off the test file's syntax tree: a test runs over every regime when
+    it is parametrized over REGIME_NAMES.
+    """
+    import ast
+    with open(os.path.join(ROOT, "tests", "test_invariants.py"),
+              encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    tests = [f for f in tree.body
+             if isinstance(f, ast.FunctionDef) and f.name.startswith("test_")]
+    every = [f for f in tests
+             if any("REGIME_NAMES" in ast.unparse(d) for d in f.decorator_list)]
+    return ("Of the %d tests in tests/test_invariants.py, %d run over all five "
+            "regimes" % (len(tests), len(every)))
 
 
 def _trim(x):
@@ -108,11 +187,12 @@ def _trim(x):
 
 
 def emit():
-    return rows_boundary() + rows_amendments() + prose_figures()
+    return (rows_boundary() + rows_amendments() + rows_error_direction()
+            + rows_by_tier() + rows_refusal_causes() + prose_figures())
 
 
 def squash(text):
-    # A space inside A parenthesis is column padding. The block writes
+    # A space inside a parenthesis is column padding. The block writes
     # "30 ( 4.4%)" and "137 (15.1%)" to keep the column aligned, so the space
     # is layout rather than content and is removed on both sides.
     text = text.replace("**", "").replace("`", "").replace("( ", "(")
@@ -127,9 +207,19 @@ def main():
         return 0
     with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as fh:
         readme = squash(fh.read())
-    missing = [(t, r) for t, r in derived if squash(r) not in readme]
+    # An empty derivation is not a figure that matched. `"" in readme` is
+    # True of every document ever written, so a deriver that stopped producing
+    # anything (a slice that became [:0], a table that lost its rows) would be
+    # counted as found and reported inside the "N of N" total.
+    empty = [(t, r) for t, r in derived if not squash(r).strip()]
+    for tag, _ in empty:
+        print("EMPTY   [%s]\n  this deriver produced nothing to look for, so "
+              "it asserts nothing about the page" % tag)
+    missing = [(t, r) for t, r in derived
+               if (t, r) not in empty and squash(r) not in readme]
     for tag, row in missing:
         print("MISSING [%s]\n  %s" % (tag, row))
+    missing = empty + missing
     tables = sum(1 for t, _ in derived if not t.startswith("prose:"))
     print("\n%d of %d derived figures found verbatim in README.md "
           "(%d table rows, %d in prose)"

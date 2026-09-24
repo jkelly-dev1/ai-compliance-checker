@@ -129,20 +129,22 @@ RULE_TEXT = {
         "changed to 000.",
 }
 
-# What a decision needs before it may be made. Notice these are DOCUMENTS and
-# EXTERNAL FACTS, not more of the same telemetry, which is the finding.
+# What a decision needs before it may be made. Notice these are documents and
+# external facts, not more of the same telemetry, which is the finding.
 RULE_PRECONDITIONS = {
     "encryption_at_rest": ("encryption_enabled", "risk_assessment_on_file",
                            "alternative_control_documented"),
     "audit_controls": ("log_retention_days", "log_review_evidence"),
     "unique_user_id": ("shared_accounts_count",),
-    # Alternative_control_documented was read by this Rule and not declared
-    # here. The corpus never produced a submission carrying
-    # risk_assessment_on_file without it, so the omission was invisible until
-    # acc/minimal.py constructed exactly that combination and the checker
-    # raised KeyError. A rule that reads a field it does not declare can
-    # decide on evidence its precondition set says it does not need.
-    "workforce_termination": ("termination_events", "revocation_sla_met",
+    # The rule is "revocation met, or assessed with a documented
+    # alternative", so it reads alternative_control_documented and must
+    # declare it; a rule that reads a field it does not declare can decide on
+    # evidence its precondition set says it does not need. It does not read
+    # termination_events, because the count of terminations cannot change
+    # either arm, so declaring that field would make the checker refuse for
+    # want of a number it would not look at. The naive checker does read it
+    # (see check_naive), so the field stays in the population.
+    "workforce_termination": ("revocation_sla_met",
                               "risk_assessment_on_file",
                               "alternative_control_documented"),
     # vendor_access_type is what makes the conduit exception decidable.
@@ -235,6 +237,26 @@ EVIDENCE_TIERS = ("questionnaire", "config_export", "document_review",
                   "full_assessment")
 TIER_WEIGHTS = (0.34, 0.31, 0.23, 0.12)
 
+# Every fact a submission can carry. One tuple, read by the population that
+# builds a submission and by the richest evidence tier, because "everything"
+# has to mean everything.
+#
+# Written out, not derived from RULE_PRECONDITIONS. Evidence a submission can
+# carry is a fact about the population; what a rule requires is a fact about
+# the rule. Derived from the second, the first would agree only by
+# coincidence: tightening a precondition set would remove a field from the
+# world, including one the naive checker reads (termination_events), and a
+# change to the honest checker would move the naive checker's published error
+# rate as a side effect. tests/test_invariants.py::
+# test_some_evidence_tier_carries_everything_the_population_has pins it.
+SUBMITTABLE_FIELDS = (
+    "encryption_enabled", "risk_assessment_on_file",
+    "alternative_control_documented", "log_retention_days",
+    "log_review_evidence", "shared_accounts_count", "termination_events",
+    "revocation_sla_met", "vendor_receives_ephi", "baa_executed",
+    "conduit_exception_claimed", "vendor_access_type", "released_columns",
+    "date_precision", "zip_digits", "zip3_population")
+
 TIER_FIELDS = {
     # A yes/no questionnaire. Carries booleans and nothing that decides them.
     "questionnaire": ("encryption_enabled", "shared_accounts_count",
@@ -254,12 +276,7 @@ TIER_FIELDS = {
                         "conduit_exception_claimed", "vendor_access_type",
                         "released_columns", "date_precision", "zip_digits"),
     # Everything, including the external population figure.
-    "full_assessment": tuple(RULE_PRECONDITIONS["encryption_at_rest"]
-                             + RULE_PRECONDITIONS["audit_controls"]
-                             + RULE_PRECONDITIONS["unique_user_id"]
-                             + RULE_PRECONDITIONS["workforce_termination"]
-                             + RULE_PRECONDITIONS["business_associate"]
-                             + RULE_PRECONDITIONS["de_identification"]),
+    "full_assessment": SUBMITTABLE_FIELDS,
 }
 
 # The evidence a changed intake would demand. Documents, not judgments.
@@ -306,13 +323,7 @@ def make_entity(index: int) -> Entity:
 
 
 def make_submission(e: Entity) -> Submission:
-    available = {k: getattr(e, k) for k in (
-        "encryption_enabled", "risk_assessment_on_file",
-        "alternative_control_documented", "log_retention_days",
-        "log_review_evidence", "shared_accounts_count", "termination_events",
-        "revocation_sla_met", "vendor_receives_ephi", "baa_executed",
-        "conduit_exception_claimed", "vendor_access_type", "released_columns",
-        "date_precision", "zip_digits", "zip3_population")}
+    available = {k: getattr(e, k) for k in SUBMITTABLE_FIELDS}
     carried = {k: v for k, v in available.items()
                if k in TIER_FIELDS[e.evidence_tier]}
     return Submission(entity_id=e.entity_id, evidence_tier=e.evidence_tier,

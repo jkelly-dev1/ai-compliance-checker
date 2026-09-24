@@ -76,8 +76,8 @@
         "v1_naive": {
           "decided": 2400,
           "decided_pct": 100.0,
-          "wrong": 484,
-          "wrong_pct_of_decided": 20.2,
+          "wrong": 597,
+          "wrong_pct_of_decided": 24.9,
           "refused": 0
         },
         "v2_definition_aware": {
@@ -105,11 +105,11 @@
       "per_rule": {
         "v1_naive": {
           "setback": {
-            "right": 452,
-            "wrong": 148,
+            "right": 339,
+            "wrong": 261,
             "refused": 0,
-            "false_pass": 44,
-            "false_fail": 104,
+            "false_pass": 5,
+            "false_fail": 256,
             "direction": "MIXED"
           },
           "height": {
@@ -244,22 +244,22 @@
         "v1_naive": {
           "bim": {
             "decided": 532,
-            "wrong": 102,
+            "wrong": 116,
             "refused": 0
           },
           "cad": {
             "decided": 608,
-            "wrong": 106,
+            "wrong": 145,
             "refused": 0
           },
           "pdf_vector": {
             "decided": 952,
-            "wrong": 204,
+            "wrong": 251,
             "refused": 0
           },
           "pdf_scan": {
             "decided": 308,
-            "wrong": 72,
+            "wrong": 85,
             "refused": 0
           }
         },
@@ -331,7 +331,6 @@
         }
       },
       "refusal_causes": {
-        "access_strip_ft": 630,
         "wall_polygon": 630,
         "deck_height_in": 467,
         "perimeter_grades_ft": 467,
@@ -339,6 +338,7 @@
         "mezzanine_area_sf": 467,
         "room_below_area_sf": 467,
         "eave_height_ft": 315,
+        "access_strip_ft": 315,
         "projection_schedule": 154,
         "accessory_footprint_sf": 77
       }
@@ -378,11 +378,11 @@
           "refused": 1133
         },
         "v3_with_intake": {
-          "decided": 2656,
-          "decided_pct": 73.8,
+          "decided": 2865,
+          "decided_pct": 79.6,
           "wrong": 0,
           "wrong_pct_of_decided": 0.0,
-          "refused": 944
+          "refused": 735
         }
       },
       "per_rule": {
@@ -562,9 +562,9 @@
             "direction": "never wrong"
           },
           "workforce_termination": {
-            "right": 391,
+            "right": 600,
             "wrong": 0,
-            "refused": 209,
+            "refused": 0,
             "false_pass": 0,
             "false_fail": 0,
             "direction": "never wrong"
@@ -656,9 +656,9 @@
         },
         "v3_with_intake": {
           "questionnaire": {
-            "decided": 627,
+            "decided": 836,
             "wrong": 0,
-            "refused": 627
+            "refused": 418
           },
           "config_export": {
             "decided": 850,
@@ -686,7 +686,6 @@
         "conduit_exception_claimed": 379,
         "vendor_access_type": 379,
         "log_retention_days": 209,
-        "termination_events": 209,
         "date_precision": 209,
         "zip_digits": 209
       }
@@ -726,11 +725,11 @@
           "refused": 1734
         },
         "v3_with_intake": {
-          "decided": 2300,
-          "decided_pct": 63.9,
+          "decided": 2510,
+          "decided_pct": 69.7,
           "wrong": 0,
           "wrong_pct_of_decided": 0.0,
-          "refused": 1300
+          "refused": 1090
         }
       },
       "per_rule": {
@@ -926,9 +925,9 @@
             "direction": "never wrong"
           },
           "vuln_scanning": {
-            "right": 214,
+            "right": 424,
             "wrong": 0,
-            "refused": 386,
+            "refused": 176,
             "false_pass": 0,
             "false_fail": 0,
             "direction": "never wrong"
@@ -1009,9 +1008,9 @@
             "refused": 880
           },
           "scanner_output": {
-            "decided": 840,
+            "decided": 1050,
             "wrong": 0,
-            "refused": 420
+            "refused": 210
           },
           "config_and_policy": {
             "decided": 810,
@@ -1029,11 +1028,10 @@
         "stores_processes_transmits": 2316,
         "connected_to_cde": 2316,
         "segmentation_validated": 2316,
-        "compensating_control_documented": 1042,
+        "compensating_control_documented": 1563,
+        "customized_approach_trra": 1563,
         "segmentation_test_evidence": 521,
-        "customized_approach_trra": 521,
         "access_path": 386,
-        "asv_scan_required": 386,
         "default_accounts_present": 176,
         "stores_pan": 176,
         "pan_protection_method": 176,
@@ -1382,7 +1380,6 @@
         "categories_in_scope": 3114,
         "subservice_treatment": 3114,
         "subservice_owned": 3114,
-        "cuec_documented": 3114,
         "report_type": 2280,
         "period_days": 2280,
         "control_operated_sample": 1188,

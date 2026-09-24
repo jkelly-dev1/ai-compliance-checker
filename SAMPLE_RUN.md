@@ -7,16 +7,23 @@ regenerates with `scripts/offline_demo.py`; the paid half is stored in `audit/`.
 
 ```
 $ .venv/bin/python -m pytest -q
-..........................................................................
-84 passed in 0.40s
+........................................................................ [ 59%]
+.................................................                        [100%]
+121 passed in 1.70s
 ```
 
-Three layers. `test_invariants.py` runs ten checks over ALL FIVE regimes,
-including the one the repository rests on, every checker except the naive one
+Four layers. `test_invariants.py` holds the cross-regime invariants; the
+README says how many run over all five regimes and which do not, and
+`scripts/check_readme_numbers.py` derives that sentence from the file. They
+include the one the repository rests on, every checker except the naive one
 must be never wrong, plus a mutation check that builds a deliberately reckless
-checker to prove that assertion can fail. `test_traps.py` asserts one test per
-documented trap. `test_version_bump.py` encodes three defects that already
-happened.
+checker, measures through it, and requires the real assertion to raise.
+`test_traps.py` asserts one test per documented trap. `test_version_bump.py`
+checks that an amendment moves the truth and the checker together.
+`test_gates.py` calls the scripts whose exit code is a verdict (the artifact
+check, the README checker, and the paid runner's refusal to overwrite a stored
+run), because a gate nobody calls can be turned off by changing a `return 1`
+to a `return 0` while every step stays green.
 
 ## The offline measurement
 
@@ -34,17 +41,17 @@ no model was called   cases per regime: 600
 2-4. THE BOUNDARY, PER REGIME
 ==========================================================================
 
-ZONING :  Northgate R-1, a synthetic ordinance -- not any jurisdiction's code
+ZONING  --  Northgate R-1, a synthetic ordinance -- not any jurisdiction's code
 600 cases x 4 rules = 2400 decisions
 
   checker                         decided              wrong   refused
-  v1_naive                 2400 (100.0%)    484 ( 20.2% of decided)         0
+  v1_naive                 2400 (100.0%)    597 ( 24.9% of decided)         0
   v2_definition_aware       684 ( 28.5%)      0 (  0.0% of decided)      1716
   v4_minimal                684 ( 28.5%)      0 (  0.0% of decided)      1716
   v3_with_intake           1389 ( 57.9%)      0 (  0.0% of decided)      1011
 
   naive checker, error direction by rule
-    setback                  false pass   44   false fail  104   MIXED
+    setback                  false pass    5   false fail  256   MIXED
     height                   false pass    1   false fail  286   MIXED
     coverage                 false pass    9   false fail   28   MIXED
     stories                  false pass    7   false fail    5   MIXED
@@ -56,12 +63,12 @@ ZONING :  Northgate R-1, a synthetic ordinance -- not any jurisdiction's code
     pdf_scan                     0 of 308   (  0.0%)   n=77
 
   what the refusals needed, most common first
-       630  access_strip_ft
        630  wall_polygon
        467  deck_height_in
        467  perimeter_grades_ft
        467  basement_rear_exposure_ft
        467  mezzanine_area_sf
+       467  room_below_area_sf
 
 HIPAA  --  45 CFR 164 (subsets of 164.306, 164.308, 164.312, 164.514)
 600 cases x 6 rules = 3600 decisions
@@ -70,7 +77,7 @@ HIPAA  --  45 CFR 164 (subsets of 164.306, 164.308, 164.312, 164.514)
   v1_naive                 3600 (100.0%)    791 ( 22.0% of decided)         0
   v2_definition_aware      1558 ( 43.3%)      0 (  0.0% of decided)      2042
   v4_minimal               2467 ( 68.5%)      0 (  0.0% of decided)      1133
-  v3_with_intake           2656 ( 73.8%)      0 (  0.0% of decided)       944
+  v3_with_intake           2865 ( 79.6%)      0 (  0.0% of decided)       735
 
   naive checker, error direction by rule
     encryption_at_rest       false pass    0   false fail  130   false fails only
@@ -101,7 +108,7 @@ PCI_DSS  --  PCI DSS v4.0 (subsets of Req 1, 2, 3, 8, 10, 11)
   v1_naive                 3600 (100.0%)    528 ( 14.7% of decided)         0
   v2_definition_aware       744 ( 20.7%)      0 (  0.0% of decided)      2856
   v4_minimal               1866 ( 51.8%)      0 (  0.0% of decided)      1734
-  v3_with_intake           2300 ( 63.9%)      0 (  0.0% of decided)      1300
+  v3_with_intake           2510 ( 69.7%)      0 (  0.0% of decided)      1090
 
   naive checker, error direction by rule
     network_segmentation     false pass   61   false fail   63   MIXED
@@ -121,9 +128,9 @@ PCI_DSS  --  PCI DSS v4.0 (subsets of Req 1, 2, 3, 8, 10, 11)
       2316  stores_processes_transmits
       2316  connected_to_cde
       2316  segmentation_validated
-      1042  compensating_control_documented
+      1563  compensating_control_documented
+      1563  customized_approach_trra
        521  segmentation_test_evidence
-       521  customized_approach_trra
 
 SOC2  --  AICPA TSC 2017 (rev. 2022 points of focus), subsets of CC6-CC9, A1, C1
 600 cases x 6 rules = 3600 decisions
@@ -152,9 +159,9 @@ SOC2  --  AICPA TSC 2017 (rev. 2022 points of focus), subsets of CC6-CC9, A1, C1
       3114  categories_in_scope
       3114  subservice_treatment
       3114  subservice_owned
-      3114  cuec_documented
       2280  report_type
       2280  period_days
+      1188  control_operated_sample
 
 CARD_ACT  --  Credit CARD Act of 2009 via Reg Z: 12 CFR 1026.53, 1026.5(b)(2)(ii), 1026.56
 600 cases x 3 rules = 1800 decisions
@@ -189,9 +196,9 @@ THE SAME MEASUREMENT, SIDE BY SIDE
 ==========================================================================
   regime          v1 naive    v2 all-precond        v4 minimal   v3 intake
   ------------------------------------------------------------------------
-  zoning     wrong  20.2%     28.5% dec         28.5% dec         57.9%
-  hipaa      wrong  22.0%     43.3% dec         68.5% dec         73.8%
-  pci_dss    wrong  14.7%     20.7% dec         51.8% dec         63.9%
+  zoning     wrong  24.9%     28.5% dec         28.5% dec         57.9%
+  hipaa      wrong  22.0%     43.3% dec         68.5% dec         79.6%
+  pci_dss    wrong  14.7%     20.7% dec         51.8% dec         69.7%
   soc2       wrong  36.3%     13.5% dec         13.5% dec         36.7%
   card_act   wrong  20.7%     50.3% dec         50.3% dec        100.0%
 
@@ -228,9 +235,19 @@ wrote audit/offline.json
 
 ## The paid measurement
 
-Two models, four cells, 40 cases per regime, $5.22 across four runs. Both
-models were given the rule as written, the same evidence the honest checker
-sees, and an explicit `insufficient_evidence` verdict.
+Two models, four cells, 40 cases per regime, $5.23 across the three run files
+in `audit/`, covering four regime legs: `real_run.json` holds HIPAA and SOC 2
+together and the two re-runs hold one regime each. Both models were given the
+rule as written, the same evidence the honest checker sees, and an explicit
+`insufficient_evidence` verdict.
+
+The two tables below are a frozen record of one day's experiment and are not
+regenerated: `honest_verdict` is stored per record, as it was computed at the
+time. The precondition sets in the current code differ from that day's, so the
+denominators were re-derived from the current code to check they still
+describe it: HIPAA refuses 147 of 240 and SOC 2 refuses 198 of 240 either way,
+because the declarations that differ are ones no rule reads and no
+submission's decidability turns on.
 
 ```
 WHERE THE HONEST CHECKER REFUSED: the evidence cannot support a decision
@@ -275,9 +292,16 @@ finding, and re-run:
 
 The cause was a 1,500-token cap against a model averaging 1,948 output tokens on
 that prompt: every reply cut mid-object and counted as a model failure. The
-re-run proves it from the artifact rather than by inference, because
-`stop_reason` is now recorded per record; the first run fetched it and stored it
-nowhere.
+re-run proves it from the artifact instead of by inference, because it records
+`stop_reason` per record; the first run did not store it.
+
+The 2.5% is also the cap. In `audit/real_run_soc2.json`, `gpt-5.4` has
+`completed` 234 and `incomplete` 7, every one of the seven at `output_tokens`
+4,000, exactly `MAX_OUTPUT_TOKENS`, and none of them parsed. They are
+contiguous in the record list, so they are one call of forty. Raising the cap
+moved the truncation below the pre-registered threshold; it did not remove it,
+and the only reason that is sayable is that the re-run stores a stop reason and
+a token count on every record.
 
 ## What is not measured here
 

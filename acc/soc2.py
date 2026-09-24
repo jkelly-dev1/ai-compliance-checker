@@ -135,7 +135,12 @@ MIN_SAMPLE = 25
 # correct answer to "whose control is this?" When nothing on hand says.
 RULE_PRECONDITIONS = {
     r: ("report_type", "categories_in_scope", "subservice_treatment",
-        "subservice_owned", "cuec_documented", "control_designed",
+        # cuec_documented is not a precondition. Whether the complementary
+        # user entity controls are documented is a real fact about an
+        # engagement, and it is not an input to any of these six criteria as
+        # encoded, so declaring it would make all six refuse for want of a
+        # document none of them reads.
+        "subservice_owned", "control_designed",
         "control_operated_sample", "sample_exceptions", "period_days")
     for r in RULES
 }
@@ -222,9 +227,11 @@ TIER_FIELDS = {
 
 # The four scope facts a changed intake would demand. Every one is recorded in
 # the engagement letter and the system description; none is a judgment.
+# Four, and the tuple holds four. An intake addition no rule reads buys no
+# decidability and only lengthens the form, so a field that stops being a
+# precondition stops being an intake addition in the same edit.
 INTAKE_ADDITIONS = ("report_type", "categories_in_scope",
-                    "subservice_treatment", "subservice_owned",
-                    "cuec_documented")
+                    "subservice_treatment", "subservice_owned")
 
 
 def make_engagement(index: int) -> Engagement:

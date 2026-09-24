@@ -27,9 +27,10 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to a full commit SHA, because a tag can be moved.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -54,9 +55,23 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: python scripts/offline_demo.py --cases 150
 
+      # The first half of the chain. The step below proves the README agrees
+      # with audit/offline.json; this proves audit/offline.json agrees with
+      # the code. Without it a population constant could move every published
+      # figure while the tests pass, the demo exits 0 and the README checker
+      # reports every figure found, because the invariants asserted above
+      # (never wrong, wrong somewhere, never refuses) hold whatever the rates
+      # are. Re-deriving at 600 cases costs under a second and about 17 MB.
+      - name: Shipped results match the code
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python scripts/check_artifact.py
+
       # A README is prose and drifts; audit/offline.json is evidence and does
       # not. This rebuilds each published figure from the JSON and requires the
       # exact string, so a re-run that shifts a number fails loudly rather than
       # leaving the document quietly wrong.
       - name: README numbers match the shipped results
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: python scripts/check_readme_numbers.py

@@ -10,7 +10,9 @@ percent naive error rate came from somewhere else.
 
 from __future__ import annotations
 
-from acc import card_act, hipaa, pci, soc2, zoning
+import copy
+
+from acc import card_act, hipaa, parcels, pci, soc2, zoning
 from acc.verdict import FAIL, PASS, REFUSE
 
 
@@ -46,6 +48,138 @@ def test_a_corner_lot_street_side_takes_the_front_setback():
                 "setback, whatever a side-yard reading says")
             return
     raise AssertionError("no corner lot exercises the second-frontage trap")
+
+
+def test_a_projection_is_charged_only_against_the_yard_it_is_in():
+    """Trap 2b: an allowance is not a claim about where the thing is.
+
+    A covered porch may project 8 ft into the required FRONT yard only. Read
+    as "no allowance in the side yard, therefore it encroaches on the side
+    yard by its whole depth", that sentence charges a porch at the front door
+    in full against the side and the rear as well. That is not a strict
+    reading of the allowance but a claim that one porch is in three places.
+
+    The parcel below clears every limit. It fails only if the porch is charged
+    against the side yard, which would make a large share of the population
+    fail against a grading key that contradicts the submittal model.
+    """
+    p = copy.deepcopy(zoning.corpus(1).__iter__().__next__()[0])
+    p.lot_type = "interior"
+    p.wall_front_ft, p.wall_side_ft, p.wall_rear_ft = 35.0, 10.0, 30.0
+    p.projections = {"eave": 2.0, "porch": 8.0, "porch_area_sf": 90.0,
+                     "yards": {"eave": ("front", "side", "rear"),
+                               "porch": ("front",)}}
+    # front 35 - 0 >= 25, side 10 - 0 >= 5, rear 30 - 0 >= 20: compliant.
+    # Charge the porch everywhere and the side yard becomes 10 - 8 = 2 < 5.
+    assert p.true_setback_ok() is True, (
+        "the porch is at the front and is inside its front allowance; "
+        "charging it against the side yard is the defect this pins")
+
+    sub = parcels.make_submittal(p)
+    assert zoning.check_definition_aware(sub)["setback"].result == PASS, (
+        "the honest checker must read placement out of the schedule too, or "
+        "it agrees with the key only by sharing its mistake")
+
+
+def test_a_projection_with_no_stated_yard_is_refused_not_ignored():
+    """A schedule that lists a projection but not where it is built.
+
+    Charging it against no yard would decide the setback on evidence the
+    submittal does not carry, which is the failure the honest checker exists
+    to avoid. It refuses and names the schedule.
+
+    Mutation check: delete the `unplaced` refusal in `_setback` and this goes
+    red, because the rule passes.
+    """
+    p = copy.deepcopy(zoning.corpus(1).__iter__().__next__()[0])
+    p.lot_type = "interior"
+    p.wall_front_ft, p.wall_side_ft, p.wall_rear_ft = 35.0, 10.0, 30.0
+    p.projections = {"porch": 8.0, "porch_area_sf": 90.0,
+                     "yards": {"porch": ("front",)}}
+    sub = parcels.make_submittal(p)
+    placed = zoning.check_definition_aware(sub)["setback"]
+    assert placed.result == PASS, placed.reason
+
+    schedule = dict(sub.fields["projection_schedule"])
+    schedule["yards"] = {}
+    unplaced = zoning.Submittal(**{**vars(sub),
+                                   "fields": {**sub.fields,
+                                              "projection_schedule": schedule}})
+    verdict = zoning.check_definition_aware(unplaced)["setback"]
+    assert verdict.result == REFUSE, verdict.reason
+    assert "projection_schedule" in verdict.missing
+
+
+def test_the_deck_height_clause_changes_an_answer():
+    """acc/ordinance.py says every Definition exists because it changes an
+    answer, so the 30-inch clause of the deck allowance has to flip some
+    parcel's setback verdict. If the rear yard always failed on something
+    else first, the deck's height would never decide anything.
+    """
+    decks = flips = 0
+    for p, _ in zoning.corpus(400):
+        if p.projections.get("deck", 0.0) <= 0:
+            continue
+        decks += 1
+        before = p.truth()["setback"]
+        q = copy.deepcopy(p)
+        q.deck_height_in = 12.0 if p.deck_height_in > 30.0 else 44.0
+        if q.truth()["setback"] != before:
+            flips += 1
+    assert decks > 0, "no parcel in 400 carries a deck"
+    assert flips > 0, (
+        f"the 30-inch deck clause changed no answer in {decks} parcels with "
+        f"decks, so the Definition is in the table for flavor")
+
+
+def test_every_lot_type_is_exercised_in_both_directions():
+    """The sub-population form of the both-directions guard.
+
+    test_every_rule_is_exercised_in_both_directions works at rule granularity,
+    so a conditional branch inside a rule can be one-sided while the rule as a
+    whole looks healthy. A corner-lot branch that held the street side to a
+    limit no generated wall could meet would fail every corner lot, deciding
+    every case it touched the same way. A column of FAIL proves as little as
+    the column of PASS the rule-level guard catches.
+    """
+    seen = {}
+    for p, _ in zoning.corpus(600):
+        seen.setdefault(p.lot_type, set()).add(p.truth()["setback"])
+    assert set(seen) == set(parcels.LOT_TYPES), (
+        f"lot types missing from 600 parcels: "
+        f"{sorted(set(parcels.LOT_TYPES) - set(seen))}")
+    for lot_type, results in sorted(seen.items()):
+        assert results == {True, False}, (
+            f"every {lot_type} lot in 600 has setback "
+            f"{results.pop()}; the branch decides but never discriminates")
+
+
+def test_the_population_violation_rate_stays_in_its_band():
+    """The population's own design property, measured and not just stated.
+
+    A sentence describing the violation rate can drift from the population
+    without anything noticing. POPULATION_VIOLATION_BAND is read here against
+    the measured rates, so the stated band and the tree cannot disagree.
+    """
+    n = 600
+    counts = {rule: 0 for rule in zoning.RULES}
+    any_rule = 0
+    for p, _ in zoning.corpus(n):
+        truth = p.truth()
+        for rule, ok in truth.items():
+            if not ok:
+                counts[rule] += 1
+        if not all(truth.values()):
+            any_rule += 1
+    measured = {rule: c / n for rule, c in counts.items()}
+    measured["any_rule"] = any_rule / n
+    for key, (low, high) in parcels.POPULATION_VIOLATION_BAND.items():
+        assert key in measured, f"band names {key}, which is not a rule"
+        assert low <= measured[key] <= high, (
+            f"{key} violation rate is {measured[key]:.3f} over {n} parcels, "
+            f"outside the declared band {low}-{high}. Either the population "
+            f"moved or POPULATION_VIOLATION_BAND is now describing a tree "
+            f"that no longer exists.")
 
 
 # ------------------------------------------------------------------- HIPAA
@@ -105,7 +239,17 @@ def test_an_out_of_scope_system_is_compliant_not_untested():
     fields = {"stores_processes_transmits": False, "connected_to_cde": True,
               "segmentation_validated": True, "segmentation_test_evidence": True,
               "default_accounts_present": True,
-              "compensating_control_documented": False}
+              "compensating_control_documented": False,
+              "customized_approach_trra": False}
+    # The dict above is a second copy of a precondition set, and a second copy
+    # drifts. If the rule declares a field this fixture lacks, the verdict is
+    # REFUSE, which would read as "the trap does not fire" when the truth is
+    # "the fixture is stale". Say which it is before asserting the verdict.
+    absent = [f for f in pci.RULE_PRECONDITIONS["no_vendor_defaults"]
+              if f not in fields]
+    assert not absent, (
+        f"this fixture no longer carries every precondition the rule "
+        f"declares: {absent}. The trap below cannot fire until it does.")
     a = pci.Assessment("S", "qsa_walkthrough", True, fields)
     v = pci.check_definition_aware(a)["no_vendor_defaults"]
     assert v.result == PASS and "not applicable" in v.reason
@@ -137,7 +281,7 @@ def test_a_snapshot_cannot_answer_an_operating_effectiveness_question():
     for rule, v in soc2.check_definition_aware(ev).items():
         assert v.result == REFUSE
         assert "report_type" in v.missing or "period_days" in v.missing
-    # And the naive checker answers all six from the same snapshot.
+    # The naive checker answers all six from the same snapshot.
     assert all(v.decided() for v in soc2.check_naive(ev).values())
 
 
@@ -168,8 +312,8 @@ def test_a_carved_out_control_is_not_a_finding_against_this_entity():
 
 
 def test_a_few_exceptions_in_an_adequate_sample_is_still_effective():
-    """Operating effectiveness is a rate, not a boolean. One deviation in
-    forty is not a failed control, and the naive checker says it is."""
+    """Operating effectiveness is a rate. One deviation in forty is not a
+    failed control, and the naive checker says it is."""
     common = {"report_type": "type_ii", "categories_in_scope": ("security",),
               "subservice_treatment": "none", "subservice_owned": (),
               "cuec_documented": True, "period_days": 365,
@@ -210,7 +354,7 @@ def test_a_balance_snapshot_cannot_answer_a_timing_rule():
         "payment_cents": 5000})
     v = card_act.check_definition_aware(r)["statement_timing"]
     assert v.result == REFUSE
-    # And the naive checker calls it compliant from nothing at all.
+    # The naive checker calls it compliant from nothing at all.
     assert card_act.check_naive(r)["statement_timing"].result == PASS
 
 
