@@ -7,8 +7,8 @@ repository reports decided-and-never-wrong rather than accuracy, and that is
 only expressible because this type has three values.
 
 This module deliberately contains no rules and no regime. It is imported by
-every regime and imports none of them, so a regime can never quietly depend on
-another regime's definitions through the back door.
+every regime and imports none of them, so no regime can depend on another
+regime's definitions without an import saying so.
 """
 
 from __future__ import annotations
@@ -24,9 +24,9 @@ REFUSE = "refuse"
 class Verdict:
     """One decision about one rule, with the reason it went that way.
 
-    `missing` is populated only on REFUSE, and it is what makes the refusals
-    actionable: the measurement ranks refusal causes, and a cause that is a
-    form field is a different problem from one that is a judgment.
+    `missing` is populated only on REFUSE, and it tells a reader what to
+    supply: the measurement ranks refusal causes, and a cause that is a form
+    field is a different problem from one that is a judgment.
     """
 
     rule: str

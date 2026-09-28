@@ -41,12 +41,9 @@ def measure(reg: Regime, n: int) -> dict:
     refusal_causes = Counter()
     tier_counts = Counter()
 
-    # The same n the measurement runs at. v4's enumerable domains are read off
-    # the corpus, so reading them off a different-sized corpus would give the
-    # checker an idea of what a field can hold taken from a population that is
-    # not the one under test. A field can have exactly MAX_DOMAIN distinct
-    # values at 400 cases and more at 600.
-    minimal = make_checker(reg, n)
+    # v4's domains are declared by the regime and do not come from this
+    # sample, so the checker does not depend on n.
+    minimal = make_checker(reg)
 
     for truth_obj, sub in reg.corpus(n):
         truth = reg.truth_of(truth_obj)

@@ -19,6 +19,8 @@ What a Regime must provide, and why each is separate:
   definition_aware  submission -> {rule: Verdict}. May REFUSE.
   with_intake    (submission, truth) -> submission carrying the added evidence
   tier_of        submission -> which evidence tier it arrived as
+  field_domains  field -> every value the population generator can put in it,
+                 declared beside the generator; what v4 enumerates
 
 The one rule this file enforces by construction: a checker receives a
 SUBMISSION and never a truth object. `with_intake` is the single exception and
@@ -28,7 +30,7 @@ much could be decided" is a question about the real value.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 from . import card_act, hipaa, pci, soc2, zoning
@@ -49,6 +51,9 @@ class Regime:
     definition_aware: Callable
     with_intake: Callable
     tier_of: Callable
+    # Empty unless the regime declares them, and empty is the safe side: v4
+    # enumerates nothing and every v2 refusal stands.
+    field_domains: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         # A rule with no precondition set would be silently undecidable-proof:
@@ -69,7 +74,8 @@ def _from_module(mod, tier_of, truth_of, corpus) -> Regime:
         evidence_tiers=tuple(mod.EVIDENCE_TIERS),
         corpus=corpus, truth_of=truth_of, naive=mod.check_naive,
         definition_aware=mod.check_definition_aware,
-        with_intake=mod.with_intake, tier_of=tier_of)
+        with_intake=mod.with_intake, tier_of=tier_of,
+        field_domains=dict(mod.FIELD_DOMAINS))
 
 
 REGIMES = {

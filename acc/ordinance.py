@@ -15,10 +15,10 @@ ratio is reported.
 Every Definition here exists because it changes an answer. Nothing is included
 for flavor. Each carries the field it depends on, and a submittal that lacks
 that field cannot be decided under this ordinance, which is the precondition
-machinery in acc/zoning.py working, not a limitation of it. RULE_PRECONDITIONS
-below is derived from these `requires` tuples rather than written out a second
-time, so a definition that stops needing a field stops gating on it in the
-same edit.
+machinery in acc/zoning.py working, not a limitation of it. The
+RULE_PRECONDITIONS table further down is derived from these `requires` tuples
+instead of being written out a second time, so a definition that stops needing
+a field stops gating on it in the same edit.
 """
 
 from __future__ import annotations

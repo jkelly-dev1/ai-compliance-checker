@@ -206,6 +206,11 @@ INTAKE_ADDITIONS = ("wall_polygon", "projection_schedule",
                     "perimeter_grades_ft", "eave_height_ft",
                     "access_strip_ft")
 
+# No zoning field has a finite set of values v4 could enumerate: the
+# measurements are continuous and the geometry is unhashable. So v4 decides
+# nothing here that v2 refuses.
+FIELD_DOMAINS: dict = {}
+
 
 def with_intake(s: Submittal, truth) -> Submittal:
     """Return the submittal as it would arrive under the stricter intake form.

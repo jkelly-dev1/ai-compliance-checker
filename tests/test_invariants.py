@@ -78,8 +78,8 @@ def test_every_rule_decides_at_least_once(name, measured):
     only the `refused` column tells them apart. A reader comparing regimes
     reads the direction, not the denominator.
 
-    A rule that refuses every single case is therefore a defect, and it is the
-    one defect the invariant above cannot see. This test is what
+    A rule that refuses every single case is therefore a defect, and that is
+    the one defect the invariant above cannot see. This test is what
     separates them."""
     for checker in ("v2_definition_aware", "v4_minimal", "v3_with_intake"):
         for rule, cell in measured[name]["per_rule"][checker].items():
@@ -159,7 +159,7 @@ def test_intake_only_ever_adds_evidence(name, measured):
 
     A regime whose intake additions REMOVED decidability would mean the
     with_intake function is overwriting evidence instead of filling gaps,
-    which would quietly change what is being measured.
+    which would change what is being measured without any test noticing.
     """
     v2 = measured[name]["checkers"]["v2_definition_aware"]["decided"]
     v3 = measured[name]["checkers"]["v3_with_intake"]["decided"]
@@ -279,40 +279,80 @@ def test_the_corpus_is_deterministic(name):
     assert first == second
 
 
-def test_the_minimal_checker_reads_its_domains_from_the_measured_population(
-        monkeypatch):
-    """v4's enumerable domains are read off the corpus, so they must be read
-    off the corpus being measured.
+@pytest.mark.parametrize("name", REGIME_NAMES)
+def test_every_declared_domain_holds_what_the_population_holds(name):
+    """v4 decides a case when every value of the missing fields gives the
+    same answer, and "every value" is the regime's FIELD_DOMAINS. A declared
+    domain missing a value the population can hold would let v4 decide a
+    case that value would have changed. The domains are built from the
+    constants each generator draws from; this checks the result against 600
+    generated cases, so a generator that stopped using them is caught."""
+    reg = REGIMES[name]
+    outside = {}
+    for _, sub in reg.corpus(600):
+        for key, value in sub.fields.items():
+            if key in reg.field_domains and value not in reg.field_domains[key]:
+                outside.setdefault(key, set()).add(repr(value))
+    assert not outside, (
+        f"{name}: the population holds values its declared domains do not: "
+        f"{outside}")
 
-    A field can hold fewer than MAX_DOMAIN distinct values in 400 cases and
-    more in 600, and the checker would then treat as enumerable something the
-    measurement runs over values of that it never saw.
 
-    This is asserted about the call, not about a number. Nothing observable
-    distinguishes the two sizes in this tree: no verdict differs, and
-    audit/offline.json is byte-identical either way. A test written against
-    the output would pass with the defect present, so what is pinned is that
-    the measurement hands the checker its own n.
+@pytest.mark.parametrize("name", REGIME_NAMES)
+def test_the_minimal_checker_is_never_wrong_at_small_samples(name):
+    """Never wrong by construction means at any sample size, not only at the
+    published one. v4 once read its domains off the sample being measured,
+    and at small sizes a sample holds a subset of what a field can take: it
+    then decided SOC 2 cases wrongly at every size from 5 to 45 while the
+    600-case run showed zero."""
+    reg = REGIMES[name]
+    for n in range(5, 50, 5):
+        wrong = measure(reg, n)["checkers"]["v4_minimal"]["wrong"]
+        assert wrong == 0, f"{name}: v4 decided {wrong} case(s) wrongly at n={n}"
 
-    The patch goes on acc.boundary, not acc.minimal. boundary.py does
-    `from .minimal import make_checker`, so it holds its own reference and
-    patching the source module would change nothing it calls.
+
+@pytest.mark.parametrize("name", REGIME_NAMES)
+def test_no_checker_can_reach_the_truth_at_run_time(name, monkeypatch):
+    """The runtime fence behind the source check above.
+
+    test_no_checker_names_a_truth_constructor reads names, so a checker that
+    reached a constructor through getattr on its own module, with the name
+    built from strings, would pass it. Here every population constructor and
+    every truth() method is replaced, while the checkers run, by one that
+    records the call and raises. A checker that reached the truth by any
+    route would raise, and one that swallowed the exception would still be
+    recorded.
     """
-    from acc import boundary
+    import importlib
+    reg = REGIMES[name]
+    cases = list(reg.corpus(120))
+    reached = []
 
-    seen = []
-    original = boundary.make_checker
+    def fence(label):
+        def blocked(*args, **kwargs):
+            reached.append(label)
+            raise AssertionError(f"a checker reached {label}")
+        return blocked
 
-    def recording(reg, n=400):
-        seen.append(n)
-        return original(reg, n)
+    modules = [importlib.import_module(
+        "acc." + pathlib.Path(CHECKER_MODULES[name]).stem)]
+    if name == "zoning":
+        modules.append(importlib.import_module("acc.parcels"))
+    for mod in modules:
+        for attr in dir(mod):
+            if attr.startswith("make_") and callable(getattr(mod, attr)):
+                monkeypatch.setattr(mod, attr, fence(f"{mod.__name__}.{attr}"))
+    for cls in {type(t) for t, _ in cases}:
+        if hasattr(cls, "truth"):
+            monkeypatch.setattr(cls, "truth", fence(f"{cls.__name__}.truth"))
 
-    monkeypatch.setattr(boundary, "make_checker", recording)
-    boundary.measure(REGIMES["zoning"], 137)
-    assert seen == [137], (
-        f"measure() built the minimal checker with n={seen}, not the 137 "
-        f"cases it went on to measure, so v4's idea of what a field can hold "
-        f"comes from a population that is not the one being graded")
+    from acc.minimal import make_checker
+    minimal = make_checker(reg)
+    for _, sub in cases:
+        reg.naive(sub)
+        reg.definition_aware(sub)
+        minimal(sub)
+    assert not reached, f"{name}: {sorted(set(reached))}"
 
 
 @pytest.mark.parametrize("name", REGIME_NAMES)
@@ -411,6 +451,11 @@ class _RecordingFields(dict):
     `Submission.missing()` before it decides anything, so counting a presence
     probe as a read would attribute every other rule's refusal check to the
     rule under test.
+
+    Reading the whole mapping is recorded as reading every key in it:
+    iterating it, `keys()`, `values()`, `items()`, `copy()` and `**fields`,
+    which goes through `keys()`. A rule that decided by walking the fields
+    would otherwise read nothing this probe could see.
     """
 
     def __init__(self, *args, **kwargs):
@@ -424,6 +469,58 @@ class _RecordingFields(dict):
     def get(self, key, default=None):
         self.read.add(key)
         return super().get(key, default)
+
+    def _all(self):
+        self.read.update(super().keys())
+
+    def __iter__(self):
+        self._all()
+        return super().__iter__()
+
+    def keys(self):
+        self._all()
+        return super().keys()
+
+    def values(self):
+        self._all()
+        return super().values()
+
+    def items(self):
+        self._all()
+        return super().items()
+
+    def copy(self):
+        self._all()
+        return dict(super().items())
+
+
+def test_the_read_probe_counts_reading_the_whole_mapping():
+    """The recorder's own check, because no rule walks its fields today.
+
+    The two read invariants below would pass with whole-mapping reads
+    recording nothing, since no shipped rule makes one. Each stub rule here
+    reads the fields one way that never names a key, and every key must land
+    in `.read`.
+    """
+    stubs = {
+        "for k in f": lambda f: [k for k in f],
+        "dict(f)": dict,
+        "f.keys()": lambda f: list(f.keys()),
+        "f.values()": lambda f: list(f.values()),
+        "f.items()": lambda f: list(f.items()),
+        "f.copy()": lambda f: f.copy(),
+        "{**f}": lambda f: {**f},
+    }
+    unseen = {}
+    for label, rule in stubs.items():
+        recording = _RecordingFields({"alpha": 1, "beta": 2, "gamma": 3})
+        rule(recording)
+        if recording.read != {"alpha", "beta", "gamma"}:
+            unseen[label] = sorted(recording.read)
+    assert not unseen, (
+        f"reading the whole mapping these ways recorded only these keys, so "
+        f"a rule that decided by walking its fields would read nothing the "
+        f"probe could see: {unseen}")
 
 
 _TRIALS = 400
@@ -538,7 +635,7 @@ def test_every_declared_precondition_is_actually_read(name, probed):
 
     A field declared and never read makes the rule refuse for want of
     something it would not have looked at, and `Verdict.missing` (which
-    acc/verdict.py calls "what makes the refusals actionable") then names it.
+    acc/verdict.py says "tells a reader what to supply") then names it.
     That is a definite finding about evidence the rule never examined, and
     the README publishes the ranking of those causes.
     """

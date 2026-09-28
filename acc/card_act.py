@@ -4,11 +4,11 @@ What this is and is not. A simplified encoding of three requirements of the
 Credit CARD Act of 2009 as implemented in Regulation z. It is not a compliance
 product and it is not legal advice.
 
-Why this regime is deliberately small. Its headline difficulty, you cannot
-decide a timing rule from a snapshot, is the same structural point the SOC 2
-regime makes about Type I evidence answering a Type II question. A second full
-regime restating that would add length rather than evidence. Three rules is
-enough to carry what this domain has that no other regime here does.
+Why this regime is small. Its headline difficulty, you cannot decide a timing
+rule from a snapshot, is the same structural point the SOC 2 regime makes about
+Type I evidence answering a Type II question. A second full regime restating
+that would add length rather than evidence. Three rules is enough to carry what
+this domain has that no other regime here does.
 
 That one thing: everywhere else in this repository the arithmetic is trivial
 and the definitions are the work. A setback is a subtraction; occupant load is
@@ -21,7 +21,7 @@ are arithmetically defensible and both are the wrong computation. That is a
 counter-example to this repository's own thesis and it is here for that
 reason.
 
-What is deliberately not encoded. The penalty-fee safe harbor amounts in
+What is left out. The penalty-fee safe harbor amounts in
 1026.52(b)(1)(ii) are adjusted annually by the CFPB. Encoding a dollar figure
 would put a number in this repository that goes stale on a schedule and that
 nothing here can re-verify. The three rules below turn on sequence, allocation
@@ -173,6 +173,9 @@ _BALANCE_KINDS = (("purchases", 1800), ("cash_advance", 2500),
                   ("promo", 0), ("balance_transfer", 900))
 
 
+DUE_DAY_FIRST, DUE_DAY_LAST = 24, 31
+
+
 def make_account(index: int) -> Account:
     rng = random.Random(f"acc-card-{index}")
     tier = rng.choices(EVIDENCE_TIERS, TIER_WEIGHTS)[0]
@@ -214,7 +217,7 @@ def make_account(index: int) -> Account:
     # proportional one.
     lowest = min(balances, key=lambda n: balances[n][1])
 
-    due = rng.randint(24, 31)
+    due = rng.randint(DUE_DAY_FIRST, DUE_DAY_LAST)
     sent = due - rng.choices((15, 18, 21, 25, 28),
                              (0.09, 0.11, 0.28, 0.33, 0.19))[0]
     fee = rng.random() < 0.27
@@ -228,6 +231,20 @@ def make_account(index: int) -> Account:
         opt_in_on_file=rng.random() < 0.58,
         opt_in_revoked_day=rng.choice((-1, -1, -1, rng.randint(0, due))),
         evidence_tier=tier)
+
+
+_BOOL = (False, True)
+# Every value the generator above can put in each field, built from the same
+# constants it draws from so the two cannot drift. v4 (acc/minimal.py)
+# enumerates these and nothing else. A field left out is never enumerated, so
+# a rule missing it keeps its refusal.
+# Left out: the balances and the allocation, which are unhashable, and the
+# day and cent amounts, whose ranges are far past what v4 will enumerate.
+FIELD_DOMAINS = {
+    "due_day": tuple(range(DUE_DAY_FIRST, DUE_DAY_LAST + 1)),
+    "over_limit_fee_charged": _BOOL,
+    "opt_in_on_file": _BOOL,
+}
 
 
 def make_record(a: Account) -> Record:

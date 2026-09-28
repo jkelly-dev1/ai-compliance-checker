@@ -7,9 +7,9 @@ regenerates with `scripts/offline_demo.py`; the paid half is stored in `audit/`.
 
 ```
 $ .venv/bin/python -m pytest -q
-........................................................................ [ 59%]
-.................................................                        [100%]
-121 passed in 1.70s
+........................................................................ [ 50%]
+......................................................................   [100%]
+142 passed in 2.25s
 ```
 
 Four layers. `test_invariants.py` holds the cross-regime invariants; the
@@ -205,15 +205,18 @@ THE SAME MEASUREMENT, SIDE BY SIDE
   v2, v4 and v3 are all NEVER WRONG. Only v1 has an error rate, which is
   why the other three are reported by what they DECIDE.
 
-  The naive checker answers everything and is wrong 15-36% of the
-  time; the other three are never wrong and answer a minority.
-  Those are not points on one scale, which is why no accuracy
-  figure appears anywhere in this repository.
+  The naive checker answers everything and is wrong 14.7% to 36.3% of the time;
+  the other three are never wrong and decide 13.5% to 100.0% of the cases.
+  Those are not points on one scale, which is why no accuracy figure
+  appears anywhere in this repository.
 
-  v2 -> v4 IS FREE. Same rules, same evidence; v4 simply stops
-  refusing once the answer is determined by the fields present.
-  On HIPAA that is worth more than half of what changing the
-  intake form buys, at no cost to anyone submitting anything.
+  v2 -> v4 IS FREE. Same rules, same evidence; v4 stops refusing once
+  every possible value of the missing fields gives the same answer.
+  zoning: v4 adds 0.0 points of the 29.4 a changed intake form adds.
+  hipaa: v4 adds 25.2 points of the 36.3 a changed intake form adds.
+  pci_dss: v4 adds 31.1 points of the 49.0 a changed intake form adds.
+  soc2: v4 adds 0.0 points of the 23.2 a changed intake form adds.
+  card_act: v4 adds 0.0 points of the 49.7 a changed intake form adds.
 
 ==========================================================================
 5. THE AMENDMENT: what a routine edition change re-decides
@@ -271,10 +274,11 @@ branches, written before any call, fired differently for the two models on the
 same regime. Per that pre-registration, two models is not a provider comparison
 and no provider claim is made.
 
-What it means, set against the minimal checker. On HIPAA, 42% of the honest
+What it means, set against the minimal checker. On HIPAA, 42.9% of the honest
 checker's refusals were over-refusals that v4 recovers; deciding them anyway
-costs 5-9%. On SOC 2, v4 recovers NONE of them, the missing evidence is a KIND
-of evidence, not a field, and the model that decided 78.8% of them paid 17.3%.
+cost 5.6% and 8.6%. On SOC 2, v4 recovers none of them, because every refusal
+turns on a field no checker can enumerate, and the model that decided 78.8% of
+them was wrong on 17.3%.
 The models were not better at compliance than the checker. They were better at
 spotting where its precondition sets were too strict.
 

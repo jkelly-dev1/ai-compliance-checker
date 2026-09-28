@@ -44,6 +44,8 @@ from acc.regime import REGIMES                                  # noqa: E402
 from acc.version_bump import BUMPS, measure_bump                # noqa: E402
 from acc.version_bump import format_report as bump_report       # noqa: E402
 
+HONEST = ("v2_definition_aware", "v4_minimal", "v3_with_intake")
+
 
 def cross_regime_table(results: dict) -> str:
     """All four checkers. v4 sits next to v2 because it is the same checker
@@ -61,10 +63,82 @@ def cross_regime_table(results: dict) -> str:
             f"{'':<4}  {c['v4_minimal']['decided_pct']:>7.1f}% dec{'':<4}  "
             f"{c['v3_with_intake']['decided_pct']:>7.1f}%")
     lines.append("")
-    lines.append("  v2, v4 and v3 are all NEVER WRONG. Only v1 has an error "
-                 "rate, which is")
-    lines.append("  why the other three are reported by what they DECIDE.")
+    lines.extend(never_wrong_lines(results))
     return "\n".join(lines)
+
+
+# The sentences under each table are computed from what was measured, not
+# printed as fixed text. The demo takes --cases and --regime, and a sentence
+# written for the 600-case, five-regime run would otherwise be printed under
+# a run it does not describe.
+
+def honest_errors(results: dict) -> list:
+    """Every (regime, checker, count) where an honest checker was wrong."""
+    return [(name, c, m["checkers"][c]["wrong"])
+            for name, m in results.items() for c in HONEST
+            if m["checkers"][c]["wrong"]]
+
+
+def never_wrong_lines(results: dict) -> list:
+    wrong = honest_errors(results)
+    if not wrong:
+        return ["  v2, v4 and v3 are all NEVER WRONG. Only v1 has an error "
+                "rate, which is",
+                "  why the other three are reported by what they DECIDE."]
+    return ["  AN HONEST CHECKER WAS WRONG, which is a defect in the "
+            "encoding:"] + [f"    {name} {c}: {n} wrong decision(s)"
+                            for name, c, n in wrong]
+
+
+def summary_lines(results: dict) -> list:
+    rates = [m["checkers"]["v1_naive"]["wrong_pct_of_decided"]
+             for m in results.values()]
+    span = (f"{rates[0]:.1f}%" if len(rates) == 1
+            else f"{min(rates):.1f}% to {max(rates):.1f}%")
+    honest_ok = all(m["checkers"][c]["wrong"] == 0
+                    for m in results.values() for c in HONEST)
+    # What the honest checkers decide is a range read off the same table,
+    # not a word such as "minority": one intake form lets a checker decide
+    # every case, and the sentence sits directly under that cell.
+    shares = [m["checkers"][c]["decided_pct"]
+              for m in results.values() for c in HONEST]
+    decided = (f"{shares[0]:.1f}%" if min(shares) == max(shares)
+               else f"{min(shares):.1f}% to {max(shares):.1f}%")
+    lines = [f"  The naive checker answers everything and is wrong {span} of "
+             f"the time;",
+             "  the other three " + ("are never wrong and " if honest_ok
+                                     else "")
+             + f"decide {decided} of the cases.",
+             "  Those are not points on one scale, which is why no accuracy "
+             "figure",
+             "  appears anywhere in this repository.",
+             "",
+             "  v2 -> v4 IS FREE. Same rules, same evidence; v4 stops "
+             "refusing once",
+             "  every possible value of the missing fields gives the same "
+             "answer."]
+    for name, m in results.items():
+        c = m["checkers"]
+        base = c["v2_definition_aware"]["decided_pct"]
+        free = c["v4_minimal"]["decided_pct"] - base
+        form = c["v3_with_intake"]["decided_pct"] - base
+        if form > 0:
+            lines.append(f"  {name}: v4 adds {free:.1f} points of the "
+                         f"{form:.1f} a changed intake form adds.")
+    return lines
+
+
+def amendment_lines(bumps: list) -> list:
+    to_fail = sum(b["flipped_to_fail"] for b in bumps)
+    to_pass = sum(b["flipped_to_pass"] for b in bumps)
+    if to_fail and not to_pass:
+        return ["  Every flip is toward FAIL and none toward PASS. These are "
+                "not",
+                "  errors: they are decisions issued correctly under one "
+                "edition",
+                "  that are unsupportable under the next, and nothing in the",
+                "  checker's inputs changed, so nothing notices."]
+    return [f"  {to_fail} flip(s) toward FAIL and {to_pass} toward PASS."]
 
 
 def build_payload(names, cases, results=None, bumps=None) -> dict:
@@ -144,15 +218,7 @@ def main() -> int:
     print("=" * 74)
     print(cross_regime_table(results))
     print()
-    print("  The naive checker answers everything and is wrong 15-36% of the")
-    print("  time; the other three are never wrong and answer a minority.")
-    print("  Those are not points on one scale, which is why no accuracy")
-    print("  figure appears anywhere in this repository.")
-    print()
-    print("  v2 -> v4 IS FREE. Same rules, same evidence; v4 simply stops")
-    print("  refusing once the answer is determined by the fields present.")
-    print("  On HIPAA that is worth more than half of what changing the")
-    print("  intake form buys, at no cost to anyone submitting anything.")
+    print("\n".join(summary_lines(results)))
 
     print()
     print("=" * 74)
@@ -161,17 +227,16 @@ def main() -> int:
     bumps = [measure_bump(n, args.cases) for n in names if n in BUMPS]
     print(bump_report(bumps))
     print()
-    print("  Every flip is toward FAIL and none toward PASS. These are not")
-    print("  errors: they are decisions issued correctly under one edition")
-    print("  that are unsupportable under the next, and nothing in the")
-    print("  checker's inputs changed, so nothing notices.")
+    print("\n".join(amendment_lines(bumps)))
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(serialize(build_payload(names, args.cases,
                                                      results, bumps)))
         print(f"\nwrote {args.json}")
-    return 0
+    # An honest checker that was wrong is a defect in the encoding, so the run
+    # that printed it fails as well as saying so.
+    return 1 if honest_errors(results) else 0
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ is what makes evidence admissible for a rule that never mentions time.
 The second trap: not every criterion is in scope. Security, the common
 criteria, is mandatory. Availability, confidentiality, processing integrity
 and privacy are SELECTED by management. A criterion from an unselected
-category is not a gap, it is not in the engagement, and a tool that evaluates
+category is not a gap: it is outside the engagement, and a tool that evaluates
 all five categories against every entity reports findings that do not exist.
 
 The third: some controls are somebody else's. Under the CARVE-OUT method a
@@ -234,16 +234,21 @@ INTAKE_ADDITIONS = ("report_type", "categories_in_scope",
                     "subservice_treatment", "subservice_owned")
 
 
+REPORT_TYPES = ("type_i", "type_ii")
+SUBSERVICE_TREATMENTS = ("carve_out", "inclusive", "none")
+PERIOD_DAYS = (30, 60, 90, 180, 270, 365)
+
+
 def make_engagement(index: int) -> Engagement:
     rng = random.Random(f"acc-soc2-{index}")
     tier = rng.choices(EVIDENCE_TIERS, TIER_WEIGHTS)[0]
-    rtype = rng.choices(("type_i", "type_ii"), (0.28, 0.72))[0]
+    rtype = rng.choices(REPORT_TYPES, (0.28, 0.72))[0]
     cats = ["security"]
     if rng.random() < 0.46:
         cats.append("availability")
     if rng.random() < 0.34:
         cats.append("confidentiality")
-    sub = rng.choices(("carve_out", "inclusive", "none"), (0.41, 0.13, 0.46))[0]
+    sub = rng.choices(SUBSERVICE_TREATMENTS, (0.41, 0.13, 0.46))[0]
     owned = tuple(r for r in RULES if rng.random() < 0.16)
     designed = {r: rng.random() < 0.87 for r in RULES}
     sample = {r: rng.choices((0, 12, 25, 40, 60), (0.12, 0.19, 0.31, 0.24, 0.14))[0]
@@ -251,11 +256,29 @@ def make_engagement(index: int) -> Engagement:
     exc = {r: rng.choices((0, 1, 2, 5), (0.66, 0.19, 0.09, 0.06))[0] for r in RULES}
     return Engagement(
         entity_id=f"G{index:05d}", report_type=rtype,
-        period_days=rng.choice((30, 60, 90, 180, 270, 365)),
+        period_days=rng.choice(PERIOD_DAYS),
         categories_in_scope=tuple(cats), subservice_treatment=sub,
         cuec_documented=rng.random() < 0.57,
         control_designed=designed, control_operated_sample=sample,
         sample_exceptions=exc, subservice_owned=owned, evidence_tier=tier)
+
+
+_BOOL = (False, True)
+# Every value the generator above can put in each field, built from the same
+# constants it draws from so the two cannot drift. v4 (acc/minimal.py)
+# enumerates these and nothing else. A field left out is never enumerated, so
+# a rule missing it keeps its refusal.
+# Left out: subservice_owned, which can be any subset of the rules, and the
+# three per-rule dicts, which are unhashable.
+FIELD_DOMAINS = {
+    "report_type": REPORT_TYPES,
+    "period_days": PERIOD_DAYS,
+    "categories_in_scope": tuple(
+        ("security",) + a + c for a in ((), ("availability",))
+        for c in ((), ("confidentiality",))),
+    "subservice_treatment": SUBSERVICE_TREATMENTS,
+    "cuec_documented": _BOOL,
+}
 
 
 def make_evidence(e: Engagement) -> Evidence:

@@ -24,7 +24,7 @@ What is measured, in order of how much it matters:
   1 Where the honest checker refused, what did the model do? Every decision it
     makes there is a decision on evidence that cannot support one. The rate at
     which those are WRONG is the headline.
-  2 where the honest checker decided, did the model agree? A model that
+  2 Where the honest checker decided, did the model agree? A model that
     refuses everything scores perfectly on (1) and is useless, and this is the
     column that catches it.
   3 Overall wrong rate on everything it chose to decide, against the truth.
@@ -174,17 +174,65 @@ def call_openai(client, model, prompt):
                               "stop_reason": getattr(resp, "status", None)}
 
 
+def _brace_span_end(text: str, at: int) -> int:
+    """Index just past the brace span opening at `at`, or -1 if it never
+    closes. Braces inside JSON strings do not count."""
+    depth, in_str, esc = 0, False, False
+    for i in range(at, len(text)):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+    return -1
+
+
+def first_json_object(text: str) -> dict | None:
+    """The first complete JSON object in `text`, or None.
+
+    Decoded from each "{" in turn, so a reply that carries two objects, or a
+    braced word in prose before the object, still yields the object. One span
+    from the first "{" to the last "}" fails on both.
+    """
+    decoder = json.JSONDecoder()
+    at = text.find("{")
+    while at != -1:
+        try:
+            obj, _ = decoder.raw_decode(text, at)
+        except json.JSONDecodeError:
+            # Resume AFTER this brace span, never inside it: a "{" nested
+            # in a truncated reply is a fragment of it (a line item, a
+            # sub-verdict), not the reply. A span that never closes is a
+            # truncated reply, and there is no object to return.
+            end = _brace_span_end(text, at)
+            if end == -1:
+                return None
+            at = text.find("{", end)
+            continue
+        if isinstance(obj, dict):
+            return obj
+        at = text.find("{", at + 1)
+    return None
+
+
 def parse(text: str, rules) -> dict:
     """Pull the verdicts out. Deliberately forgiving about surrounding prose,
     and NOT forgiving about a missing rule: an omitted rule is recorded as
-    unparseable rather than quietly treated as a refusal, which would flatter
+    unparseable instead of being counted as a refusal, which would flatter
     the model on the measurement that matters most."""
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end == -1:
-        return {}
-    try:
-        obj = json.loads(text[start:end + 1])
-    except json.JSONDecodeError:
+    obj = first_json_object(text)
+    if obj is None:
         return {}
     out = {}
     for rule in rules:
@@ -345,69 +393,113 @@ def main() -> int:
     return 0
 
 
-def report(records, models, regimes) -> None:
+def parse_rate(records, model, regime) -> dict | None:
+    """Calls asked and calls whose reply parsed, for one model and regime.
+
+    The pre-registration's rule is about CALLS. A call that returned leaves
+    one record per rule, written together, so the rule records fall into
+    consecutive blocks of one call each, and a call is unparsed when no rule
+    in its block has a verdict. A call that raised leaves one `error` record.
+    Counting records instead would weigh a failed call as one row against six
+    for a parsed one, and would count the `unparseable_reply_head` record
+    that accompanies an unparsed reply as a seventh.
+    """
+    rows = [r for r in records
+            if r.get("model") == model and r.get("regime") == regime]
+    if not rows:
+        return None
+    rules = len(REGIMES[regime].rules)
+    ruled = [r for r in rows if "rule" in r]
+    blocks = [ruled[i:i + rules] for i in range(0, len(ruled), rules)]
+    failed = sum(1 for r in rows if "error" in r)
+    unparsed = failed + sum(1 for b in blocks
+                            if all(r.get("model_verdict") is None for r in b))
+    calls = len(blocks) + failed
+    return {"calls": calls, "unparsed": unparsed,
+            "pct": unparsed / calls * 100 if calls else 0.0,
+            "stops": Counter(r.get("stop_reason") or "<none>" for r in rows)}
+
+
+def refused_cell(records, model, regime) -> dict | None:
+    """Where the honest checker refused: what the model did instead."""
+    rows = [r for r in records
+            if r.get("model") == model and r.get("regime") == regime
+            and r.get("honest_verdict") == REFUSE and r.get("model_verdict")]
+    if not rows:
+        return None
+    decided = [r for r in rows if r["model_verdict"] != REFUSE]
+    wrong = [r for r in decided if (r["model_verdict"] == PASS) != r["truth"]]
+    return {"rows": len(rows), "decided": len(decided),
+            "refused": len(rows) - len(decided), "wrong": len(wrong),
+            "wrong_rules": Counter(r["rule"] for r in wrong),
+            "wrong_pct": len(wrong) / len(decided) * 100 if decided else 0.0}
+
+
+def decided_cell(records, model, regime) -> dict | None:
+    """Where the honest checker decided: did the model agree."""
+    rows = [r for r in records
+            if r.get("model") == model and r.get("regime") == regime
+            and r.get("honest_verdict") in (PASS, FAIL)
+            and r.get("model_verdict")]
+    if not rows:
+        return None
+    agreed = sum(1 for r in rows if r["model_verdict"] == r["honest_verdict"])
+    refused = sum(1 for r in rows if r["model_verdict"] == REFUSE)
+    return {"rows": len(rows), "agreed": agreed, "refused": refused,
+            "disagreed": len(rows) - agreed - refused}
+
+
+def refused_line(model, regime, c) -> str:
+    return (f"  {model:<16} {regime:<8} {c['refused']:>5}/{c['rows']:<6} "
+            f"{c['decided']:>10}/{c['rows']:<4} "
+            f"{c['wrong']:>8}/{c['decided']:<4} ({c['wrong_pct']:>4.1f}%)")
+
+
+def decided_line(model, regime, c) -> str:
+    return (f"  {model:<16} {regime:<8} {c['agreed']:>5}/{c['rows']:<6} "
+            f"{c['refused']:>10} {c['disagreed']:>11}")
+
+
+def report(records, models, regimes, echo=print) -> None:
     # The parse rate first, because the pre-registration's validity rule turns
     # on it and both tables below drop every row whose model_verdict is empty.
     # An unparsed reply leaves the tables and shrinks their denominators, so a
     # run can look tidy in both while a third of it never came back: the first
     # SOC 2 run shows 72 refused-by-honest rows where there were 198.
-    print("\nPARSE RATE AND STOP REASONS -- the pre-registration's validity "
-          "rule turns on this")
-    print(f"  {'model':<16} {'regime':<8} {'records':>8} {'unparsed':>10} "
-          f"{'rate':>8}   stop reasons")
+    echo("\nPARSE RATE AND STOP REASONS -- the pre-registration's validity "
+         "rule turns on this")
+    echo(f"  {'model':<16} {'regime':<8} {'calls':>8} {'unparsed':>10} "
+         f"{'rate':>8}   stop reasons (per record)")
     for model in models:
         for regime in regimes:
-            rows = [r for r in records
-                    if r.get("model") == model and r.get("regime") == regime]
-            if not rows:
+            p = parse_rate(records, model, regime)
+            if p is None:
                 continue
-            unparsed = sum(1 for r in rows if not r.get("model_verdict"))
-            stops = Counter(r.get("stop_reason") or "<none>" for r in rows)
-            summary = ", ".join(f"{k} {v}" for k, v in stops.most_common())
-            print(f"  {model:<16} {regime:<8} {len(rows):>8} "
-                  f"{unparsed:>10} {unparsed / len(rows) * 100:>7.1f}%   "
-                  f"{summary}")
-    print("  Rows with no parsed verdict are absent from both tables below "
-          "and from their denominators.")
+            summary = ", ".join(f"{k} {v}" for k, v in p["stops"].most_common())
+            echo(f"  {model:<16} {regime:<8} {p['calls']:>8} "
+                 f"{p['unparsed']:>10} {p['pct']:>7.1f}%   {summary}")
+    echo("  Rows with no parsed verdict are absent from both tables below "
+         "and from their denominators.")
 
-    print("\nWHERE THE HONEST CHECKER REFUSED -- the evidence cannot support "
-          "a decision")
-    print(f"  {'model':<16} {'regime':<8} {'refused too':>12} "
-          f"{'decided anyway':>15} {'of those, wrong':>17}")
+    echo("\nWHERE THE HONEST CHECKER REFUSED -- the evidence cannot support "
+         "a decision")
+    echo(f"  {'model':<16} {'regime':<8} {'refused too':>12} "
+         f"{'decided anyway':>15} {'of those, wrong':>17}")
     for model in models:
         for regime in regimes:
-            rows = [r for r in records
-                    if r.get("model") == model and r.get("regime") == regime
-                    and r.get("honest_verdict") == REFUSE
-                    and r.get("model_verdict")]
-            if not rows:
-                continue
-            refused = sum(1 for r in rows if r["model_verdict"] == REFUSE)
-            decided = [r for r in rows if r["model_verdict"] != REFUSE]
-            wrong = sum(1 for r in decided
-                        if (r["model_verdict"] == PASS) != r["truth"])
-            pct = (wrong / len(decided) * 100) if decided else 0.0
-            print(f"  {model:<16} {regime:<8} {refused:>5}/{len(rows):<6} "
-                  f"{len(decided):>10}/{len(rows):<4} "
-                  f"{wrong:>8}/{len(decided):<4} ({pct:>4.1f}%)")
+            c = refused_cell(records, model, regime)
+            if c is not None:
+                echo(refused_line(model, regime, c))
 
-    print("\nWHERE THE HONEST CHECKER DECIDED -- a model that refuses "
-          "everything is useless")
-    print(f"  {'model':<16} {'regime':<8} {'agreed':>12} {'refused':>10} "
-          f"{'disagreed':>11}")
+    echo("\nWHERE THE HONEST CHECKER DECIDED -- a model that refuses "
+         "everything is useless")
+    echo(f"  {'model':<16} {'regime':<8} {'agreed':>12} {'refused':>10} "
+         f"{'disagreed':>11}")
     for model in models:
         for regime in regimes:
-            rows = [r for r in records
-                    if r.get("model") == model and r.get("regime") == regime
-                    and r.get("honest_verdict") in (PASS, FAIL)
-                    and r.get("model_verdict")]
-            if not rows:
-                continue
-            agreed = sum(1 for r in rows
-                         if r["model_verdict"] == r["honest_verdict"])
-            refused = sum(1 for r in rows if r["model_verdict"] == REFUSE)
-            print(f"  {model:<16} {regime:<8} {agreed:>5}/{len(rows):<6} "
-                  f"{refused:>10} {len(rows) - agreed - refused:>11}")
+            c = decided_cell(records, model, regime)
+            if c is not None:
+                echo(decided_line(model, regime, c))
 
 
 if __name__ == "__main__":

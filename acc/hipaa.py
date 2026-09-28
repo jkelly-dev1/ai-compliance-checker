@@ -285,6 +285,16 @@ INTAKE_ADDITIONS = ("risk_assessment_on_file", "alternative_control_documented",
                     "conduit_exception_claimed", "vendor_access_type")
 
 
+LOG_RETENTION_DAYS = (30, 90, 180, 365, 730)
+SHARED_ACCOUNT_COUNTS = (0, 1, 2, 5)
+TERMINATION_EVENTS_MAX = 40
+VENDOR_ACCESS_TYPES = ("transmit_only", "processes")
+DATE_PRECISIONS = ("year", "month", "day")
+ZIP_DIGITS = (0, 3, 5)
+ZIP3_POPULATIONS = (4200, 11800, 19500, 26000, 91000, 240000)
+BASE_COLUMNS = ("patient_key", "dx_code", "visit_year")
+
+
 def make_entity(index: int) -> Entity:
     rng = random.Random(f"acc-hipaa-{index}")
     tier = rng.choices(EVIDENCE_TIERS, TIER_WEIGHTS)[0]
@@ -293,7 +303,7 @@ def make_entity(index: int) -> Entity:
     # that is the point of the trap. A minority did not.
     assessed = rng.random() < (0.74 if not enc else 0.55)
     alt = assessed and rng.random() < 0.82
-    cols = ["patient_key", "dx_code", "visit_year"]
+    cols = list(BASE_COLUMNS)
     if rng.random() < 0.22:
         cols.append(rng.choice(SAFE_HARBOR_DIRECT))
     return Entity(
@@ -301,25 +311,51 @@ def make_entity(index: int) -> Entity:
         encryption_enabled=enc,
         risk_assessment_on_file=assessed,
         alternative_control_documented=alt,
-        log_retention_days=rng.choice((30, 90, 180, 365, 730)),
+        log_retention_days=rng.choice(LOG_RETENTION_DAYS),
         log_review_evidence=rng.random() < 0.58,
-        shared_accounts_count=rng.choices((0, 1, 2, 5),
+        shared_accounts_count=rng.choices(SHARED_ACCOUNT_COUNTS,
                                          (0.71, 0.14, 0.09, 0.06))[0],
-        termination_events=rng.randint(0, 40),
+        termination_events=rng.randint(0, TERMINATION_EVENTS_MAX),
         revocation_sla_met=rng.random() < 0.66,
         vendor_receives_ephi=rng.random() < 0.72,
         baa_executed=rng.random() < 0.81,
         conduit_exception_claimed=rng.random() < 0.17,
-        vendor_access_type=rng.choices(("transmit_only", "processes"),
+        vendor_access_type=rng.choices(VENDOR_ACCESS_TYPES,
                                        (0.21, 0.79))[0],
         released_columns=tuple(cols),
-        date_precision=rng.choices(("year", "month", "day"),
+        date_precision=rng.choices(DATE_PRECISIONS,
                                    (0.62, 0.24, 0.14))[0],
-        zip_digits=rng.choices((0, 3, 5), (0.38, 0.49, 0.13))[0],
+        zip_digits=rng.choices(ZIP_DIGITS, (0.38, 0.49, 0.13))[0],
         # The conditional one. Roughly a third of three-digit ZIP geographies
         # in the United States fall at or under the 20,000 floor.
-        zip3_population=rng.choice((4200, 11800, 19500, 26000, 91000, 240000)),
+        zip3_population=rng.choice(ZIP3_POPULATIONS),
         evidence_tier=tier)
+
+
+_BOOL = (False, True)
+# Every value the generator above can put in each field, built from the same
+# constants it draws from so the two cannot drift. v4 (acc/minimal.py)
+# enumerates these and nothing else. A field left out is never enumerated, so
+# a rule missing it keeps its refusal.
+FIELD_DOMAINS = {
+    "encryption_enabled": _BOOL,
+    "risk_assessment_on_file": _BOOL,
+    "alternative_control_documented": _BOOL,
+    "log_retention_days": LOG_RETENTION_DAYS,
+    "log_review_evidence": _BOOL,
+    "shared_accounts_count": SHARED_ACCOUNT_COUNTS,
+    "termination_events": tuple(range(TERMINATION_EVENTS_MAX + 1)),
+    "revocation_sla_met": _BOOL,
+    "vendor_receives_ephi": _BOOL,
+    "baa_executed": _BOOL,
+    "conduit_exception_claimed": _BOOL,
+    "vendor_access_type": VENDOR_ACCESS_TYPES,
+    "released_columns": (BASE_COLUMNS,) + tuple(
+        BASE_COLUMNS + (c,) for c in SAFE_HARBOR_DIRECT),
+    "date_precision": DATE_PRECISIONS,
+    "zip_digits": ZIP_DIGITS,
+    "zip3_population": ZIP3_POPULATIONS,
+}
 
 
 def make_submission(e: Entity) -> Submission:
@@ -432,7 +468,7 @@ def check_definition_aware(s: Submission) -> dict:
 
 
 def with_intake(s: Submission, truth: Entity) -> Submission:
-    """The submission as it would arrive if the five documents were required."""
+    """The submission as it would arrive if the INTAKE_ADDITIONS were required."""
     merged = dict(s.fields)
     for k in INTAKE_ADDITIONS:
         merged.setdefault(k, getattr(truth, k))

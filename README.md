@@ -15,9 +15,9 @@ Nothing in the measurement is imported from outside the standard library.
 
 ## The one-sentence result
 
-Across five unrelated regimes, a checker that always answers is wrong on 15%
-to 36% of its decisions, and a checker that refuses when the evidence cannot
-support a decision is never wrong while still deciding 13% to 50% of them. Both
+Across five unrelated regimes, a checker that always answers is wrong on 14.7%
+to 36.3% of its decisions, and a checker that refuses when the evidence cannot
+support a decision is never wrong while still deciding 13.5% to 50.3% of them. Both
 ranges are over DECISIONS, 600 cases times four rules is 2400 zoning decisions,
 and not over cases.
 
@@ -64,15 +64,19 @@ v1 implements the stated limits against the fields the submission actually
 carries; every line of it is the obvious reading. v2 implements the rule as
 written, declares a precondition set, and REFUSES when the evidence does not
 reach. v4 is the same checker asked a better question: it stops refusing once
-the answer is determined by the fields present. v3 is v2 after a changed intake
+every possible value of the missing fields gives the same answer, where each
+regime declares the values a field can hold. v3 is v2 after a changed intake
 form supplies a handful of additional documents.
 
 Three regimes do not move between v2 and v4, and that is the design working.
-Zoning, SOC 2 and CARD Act carry their evidence as dicts and lists, wall
-polygons, per-rule control maps, balance sets, which cannot be enumerated, so
-those refusals stand. Sampling them would decide on a subset of the possible
-worlds and could be wrong, and never-wrong is the one property this repository
-will not trade.
+v4 only tries a field whose every possible value is declared and few enough to
+try. Zoning's evidence is continuous measurements and geometry. Every SOC 2
+refusal lacks the list of controls a subservice organization owns, which can
+be any subset of the six criteria. Every CARD Act refusal lacks the payment
+allocation or a statement, fee or revocation day, whose ranges run past what
+v4 enumerates. Sampling those would decide on a subset of the possible worlds
+and could be wrong, and never-wrong is the one property this repository will
+not trade.
 
 Accuracy is never reported here. A checker that answers everything and is right
 78% of the time and a checker that answers a fifth of the cases and is never
@@ -121,7 +125,7 @@ ZONING                          SOC 2
 ```
 
 Zoning's 28.5% is every BIM submittal, a quarter of the CAD ones, and exactly
-zero of the two PDF formats, which are 53% of the population. SOC 2's 13.5% is
+zero of the two PDF formats, which are 52.5% of the population. SOC 2's 13.5% is
 100% of one tier and 0% of the other three, because a configuration snapshot is
 not weak evidence for an operating-effectiveness question, it is no evidence at
 all.
@@ -168,33 +172,35 @@ honest checker had already issued:
 Every flip is toward FAIL and none toward PASS. These are not errors: they are
 decisions issued correctly under one edition that are unsupportable under the
 next, and nothing in the checker's inputs changed, so nothing notices. A
-four-day change to a statement window re-decides fifty times more of the
-population than a ten-thousand-person change to a ZIP3 floor. The size of an
-amendment says nothing about its blast radius.
+four-day change to a statement window re-decides 15.1% of the decisions it had
+issued; a ten-thousand-person change to a ZIP3 floor re-decides 0.3%. The size
+of an amendment says nothing about its blast radius.
 
 ## Claims backed by tests
 
-Of the 17 tests in `tests/test_invariants.py`, 14 run over all five regimes,
+Of the 20 tests in `tests/test_invariants.py`, 17 run over all five regimes,
 because a regime joins by writing a module and one registry line, and a test
 that only ran over zoning would let a new regime arrive with a broken encoding
 and a plausible-looking table. The three that do not are the mutation check,
 which deliberately breaks one named regime, the registry-construction check,
-which builds no regime at all, and the check that the minimal checker reads its
-domains from the population being measured, which needs only one regime to
-observe the call.
+which builds no regime at all, and the read probe's own check, which runs stub
+rules instead of a regime.
 
 | Claim | Test |
 | --- | --- |
 | The honest checker is never wrong, in every regime, for all three of v2, v4 and v3 | `tests/test_invariants.py::test_the_honest_checker_is_never_wrong` (mutation-checked: `::test_breaking_a_checker_breaks_the_invariant` binds a checker that ignores its preconditions INTO THE REGISTRY, runs the real `measure()` over it, and requires the same assertion function the test above calls to raise) |
+| v4 is never wrong at any sample size, not only the published one: measured at every size from 5 to 45 cases | `tests/test_invariants.py::test_the_minimal_checker_is_never_wrong_at_small_samples` |
+| Every value a field takes in the population is inside the domain its regime declares, so v4 never decides on a value it did not try | `tests/test_invariants.py::test_every_declared_domain_holds_what_the_population_holds` |
 | The naive checker is wrong somewhere in every regime, so the comparison is not a checker against itself | `tests/test_invariants.py::test_the_naive_checker_is_wrong_somewhere` |
 | The naive checker never refuses, so the contrast is answers-everything against refuses-honestly and not three different questions | `tests/test_invariants.py::test_the_naive_checker_never_refuses` |
 | The honest checker refuses something in every regime, so no decided rate comes from a third verdict nobody used | `tests/test_invariants.py::test_the_honest_checker_refuses_something` |
 | A changed intake form only ever adds evidence: v3 decides at least as much as v2 everywhere | `tests/test_invariants.py::test_intake_only_ever_adds_evidence` |
 | No checker names a population constructor or touches a `.truth` attribute, read off the source of every checker module | `tests/test_invariants.py::test_no_checker_names_a_truth_constructor` (the dynamic check below cannot see this: a checker that consulted the truth object would answer CORRECTLY, so the measurement and the artifact are both unchanged) |
+| No checker reaches a population constructor or a `truth()` method while it runs, by any route, including a name built at run time | `tests/test_invariants.py::test_no_checker_can_reach_the_truth_at_run_time` (every constructor and every `truth()` is replaced by one that records the call and raises) |
 | Every precondition set is non-empty: strip a submission of every field and every rule refuses | `tests/test_invariants.py::test_a_checker_cannot_reach_the_truth_object` |
 | Every rule is violated by some case and satisfied by another, so no column is decoration | `tests/test_invariants.py::test_every_rule_is_exercised_in_both_directions` (the guard that caught a units error making zoning's height rule unviolatable) |
 | Every corpus is deterministic, so the tables compare comparable runs | `tests/test_invariants.py::test_the_corpus_is_deterministic` |
-| A rule reads only the fields its precondition set declares | `tests/test_invariants.py::test_no_rule_reads_a_field_it_did_not_declare` (instruments the submission's `fields` and records every key read, so a `.get(x, default)` read counts) |
+| A rule reads only the fields its precondition set declares | `tests/test_invariants.py::test_no_rule_reads_a_field_it_did_not_declare` (instruments the submission's `fields` and records every key read, so a `.get(x, default)` read counts, and iterating the fields counts as reading all of them, which `::test_the_read_probe_counts_reading_the_whole_mapping` checks with stub rules that walk the fields) |
 | A rule reads EVERY field its precondition set declares, so a refusal never names evidence the rule would not have looked at | `tests/test_invariants.py::test_every_declared_precondition_is_actually_read` |
 | Both of the above examined every rule in every regime, rather than skipping the ones they could not enumerate | `tests/test_invariants.py::test_the_read_probe_examined_every_rule` |
 | Some evidence tier carries every field the population can supply, so tightening a rule cannot remove evidence from the world | `tests/test_invariants.py::test_some_evidence_tier_carries_everything_the_population_has` |
@@ -209,6 +215,7 @@ observe the call.
 | The count of invariant tests that run over every regime, stated above, is read off the test file | `tests/test_gates.py::test_the_readme_checker_counts_the_invariant_tests_from_the_file` |
 | Addressable is not optional and not mandatory: encryption off, with an assessment and a documented alternative, is compliant | `tests/test_traps.py::test_encryption_off_with_an_assessment_is_compliant` |
 | A three-digit ZIP below the population floor is not de-identified, and the column-name scan calls it de-identified | `tests/test_traps.py::test_a_three_digit_zip_below_the_population_floor_is_not_de_identified` |
+| A ZIP3 of exactly 20,000 people is not de-identified and one of 20,001 is, in the checker and in the truth | `tests/test_traps.py::test_a_zip3_of_exactly_the_floor_is_not_de_identified` |
 | Without the population figure the honest answer is a refusal that names the missing field | `tests/test_traps.py::test_without_the_population_figure_the_answer_is_a_refusal` |
 | Claiming the conduit exception while processing ePHI does not help | `tests/test_traps.py::test_claiming_the_conduit_exception_while_processing_does_not_help` |
 | An out-of-scope system is compliant, which is not the same fact as nobody having looked | `tests/test_traps.py::test_an_out_of_scope_system_is_compliant_not_untested` |
@@ -220,14 +227,16 @@ observe the call.
 | Operating effectiveness is a rate: one deviation in forty is not a failed control | `tests/test_traps.py::test_a_few_exceptions_in_an_adequate_sample_is_still_effective` |
 | Above the minimum, payment goes to the highest APR first; proportional allocation is defensible arithmetic and the wrong computation | `tests/test_traps.py::test_above_minimum_goes_to_the_highest_apr_first` |
 | A balance snapshot cannot answer a timing rule, and the naive checker calls it compliant from nothing at all | `tests/test_traps.py::test_a_balance_snapshot_cannot_answer_a_timing_rule` |
+| Consent revoked on the day of the fee is not consent, and revoked the day after it is | `tests/test_traps.py::test_consent_revoked_the_same_day_as_the_fee_is_not_consent` |
 | Consent revoked before the fee is not consent, whatever the flag still says | `tests/test_traps.py::test_consent_revoked_before_the_fee_is_not_consent` |
 | Every amendment in the table re-decides something | `tests/test_version_bump.py::test_every_amendment_actually_moves_something` (guards a defect that happened: a ZIP3 floor moved across a band the population has no mass in, reported 0.0%, and read as stability under revision) |
 | A tightening flips decisions toward FAIL and never toward PASS | `tests/test_version_bump.py::test_a_tightening_never_flips_a_decision_to_pass` |
 | The flip count and the now-wrong count agree | `tests/test_version_bump.py::test_flips_and_now_wrong_agree` (the signature of a defect that happened: truth moved, the registry still held the unpatched checker, and 0 flips sat beside 15 decisions that had become wrong) |
 | An amendment restores the constant it patched, so it cannot re-decide later measurements in the same process | `tests/test_version_bump.py::test_the_bump_restores_the_constant_afterwards` |
+| The offline demo's closing sentences follow from the numbers it printed, whatever `--cases` and `--regime` were | `tests/test_gates.py::test_the_demo_describes_the_run_it_printed` |
 
-The percentages are not in that table, and the never-wrong property is. 15% to
-36%, 13% to 50%, HIPAA moving 43.3% to 68.5%: those come from
+The percentages are not in that table, and the never-wrong property is. The
+headline ranges and HIPAA's move from v2 to v4 come from
 `scripts/offline_demo.py` over constructed populations whose rates are stated
 constants in each regime module, and they scale with those constants. What the
 tests assert is what does not scale, that the honest checkers are wrong zero
@@ -246,7 +255,7 @@ pre-registration and kept.
 
 ```
 python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/python -m pytest -q                                  # 121 tests
+.venv/bin/python -m pytest -q                                  # 142 tests
 .venv/bin/python scripts/offline_demo.py --cases 600 --json audit/offline.json
 .venv/bin/python scripts/check_artifact.py     # audit/offline.json vs the code
 .venv/bin/python scripts/check_readme_numbers.py   # this page vs audit/
@@ -257,11 +266,17 @@ All of it is free and needs no API key.
 
 The last two are one chain and it only means something whole. `check_artifact.py`
 re-derives `audit/offline.json` from the code in `acc/` at the artifact's own
-case count and requires an exact match; `check_readme_numbers.py` rebuilds every
-figure on this page from that artifact and requires the exact string. Without
-the first, the tests and the demo both stay green while a population constant
-moves every number here, because the invariants this repository asserts (never
-wrong, wrong somewhere, never refuses) hold whatever the rates are.
+case count and requires an exact match; `check_readme_numbers.py` rebuilds the
+measured figures on this page from that artifact and from the paid-run files in
+`audit/`, and requires the exact string. It does not rebuild the test count,
+constants the page quotes from the code, the rules or the pre-registration, an
+illustrative accuracy figure, a derived table cell restated in words rather
+than digits, or the figures that describe history: the two defects under the
+invariant below and the paid run's old token cap.
+Without the first, the tests and the demo both stay green while a population
+constant moves every number here, because the invariants this repository
+asserts (never wrong, wrong somewhere, never refuses) hold whatever the rates
+are.
 
 ## The invariant the whole repository rests on
 
@@ -283,7 +298,7 @@ It has caught two real defects that were invisible inside their own modules:
   table with a true-violation count of zero.
   `test_every_rule_is_exercised_in_both_directions` is the generalized guard.
 
-## What this does not measure
+## Limits
 
 - **Any real portfolio.** Every population is constructed, and the rates in each
   regime module are stated constants. Every number scales with them.
@@ -327,23 +342,24 @@ what the minimal checker showed:
 
 | | HIPAA | SOC 2 |
 |---|---|---|
-| refusals that were **over-refusals** (recovered by v4) | 42% | 0% |
+| refusals that were **over-refusals** (recovered by v4) | 42.9% | 0.0% |
 | wrong when deciding past a refusal -- sonnet | 5.6% | **17.3%** |
 | wrong when deciding past a refusal -- gpt-5.4 | 8.6% | 3.9% |
 
-Where 42% of the refusals were the checker's own conservatism, deciding anyway
-costs 5-9%. Where none of them were, SOC 2, whose missing evidence is a kind
-of evidence rather than a field, the model that decided most of them paid 17.3%.
+Where 42.9% of the refusals were the checker's own conservatism, deciding
+anyway cost 5.6% and 8.6%. Where none of them were, SOC 2, whose refusals all
+turn on a field no checker can enumerate, the model that decided most of them
+was wrong on 17.3%.
 
 So the models were not better at compliance than the checker. They were better
-at noticing where its precondition sets were too strict, and no better than
-guessing where the evidence genuinely could not support a decision. The minimal
-checker separates those two cases mechanically and for free; the paid runs
-confirm the separation from outside.
+at noticing where its precondition sets were too strict. Where the evidence
+genuinely could not support a decision they decided anyway and were sometimes
+wrong, where the honest checker refuses and is never wrong. The minimal checker
+separates those two cases mechanically and for free; the paid runs confirm the
+separation from outside.
 
-`claude-sonnet-5`'s SOC 2 errors concentrate exactly where the theory predicts:
-`availability_capacity` and `confidential_disposal`, the two criteria whose
-applicability depends on which categories management selected.
+`claude-sonnet-5`'s 27 wrong SOC 2 decisions fall on all six criteria, the most
+on `change_management` (7).
 
 ### One run was invalidated by its own pre-registration
 

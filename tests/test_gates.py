@@ -166,6 +166,7 @@ def test_the_readme_checker_counts_the_invariant_tests_from_the_file(
     shutil.copytree(ROOT / "tests", tmp_path / "tests",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "README.md", tmp_path / "README.md")
+    shutil.copy(ROOT / "SAMPLE_RUN.md", tmp_path / "SAMPLE_RUN.md")
     monkeypatch.setattr(check_readme_numbers, "ROOT", str(tmp_path))
     assert check_readme_numbers.main() == 0
     capsys.readouterr()
@@ -192,11 +193,77 @@ def test_the_readme_checker_still_derives_every_block():
     """
     tags = {tag.split(":", 1)[0] for tag, _ in check_readme_numbers.emit()}
     assert tags == {"boundary", "amendment", "direction", "tier", "refusals",
-                    "prose"}, (
+                    "prose", "paid"}, (
         f"a family of derived figures has disappeared from emit(): {tags}. "
         f"The script will go on reporting 'N of N found' about whatever is "
         f"left.")
     assert check_readme_numbers.main() == 0
+
+
+def test_the_demo_describes_the_run_it_printed():
+    """offline_demo.py prints its conclusions under tables whose size and
+    regimes are arguments. Each sentence must follow from the numbers above
+    it: an honest checker that was wrong is reported as wrong, and an
+    amendment that flipped something to PASS is not described as flipping
+    nothing that way."""
+    import offline_demo
+
+    def result(v1, wrong=0, intake=10.0):
+        cell = {"wrong": 0, "decided_pct": 10.0, "wrong_pct_of_decided": v1}
+        return {"checkers": {"v1_naive": dict(cell),
+                             "v2_definition_aware": dict(cell),
+                             "v4_minimal": dict(cell, wrong=wrong),
+                             "v3_with_intake": dict(cell,
+                                                    decided_pct=intake)}}
+
+    clean = "\n".join(offline_demo.never_wrong_lines({"a": result(20.0)}))
+    assert "NEVER WRONG" in clean
+    broken = "\n".join(offline_demo.never_wrong_lines(
+        {"a": result(20.0), "b": result(30.0, wrong=5)}))
+    assert "NEVER WRONG" not in broken and "b v4_minimal: 5" in broken
+    summary = "\n".join(offline_demo.summary_lines(
+        {"a": result(12.34), "b": result(40.0)}))
+    assert "wrong 12.3% to 40.0%" in summary
+    assert "never wrong" in summary
+    assert "never wrong" not in "\n".join(offline_demo.summary_lines(
+        {"b": result(40.0, wrong=1)}))
+    # What the honest checkers decide is stated from the cells, so a run in
+    # which one of them decides every case is not described as a minority.
+    assert "decide 10.0% of the cases" in summary
+    majority = "\n".join(offline_demo.summary_lines(
+        {"a": result(20.0), "b": result(30.0, intake=100.0)}))
+    assert "decide 10.0% to 100.0% of the cases" in majority
+    assert "minority" not in majority
+    flips = [{"flipped_to_fail": 3, "flipped_to_pass": 0}]
+    assert "none toward PASS" in "\n".join(offline_demo.amendment_lines(flips))
+    flips.append({"flipped_to_fail": 0, "flipped_to_pass": 2})
+    assert "none toward PASS" not in "\n".join(
+        offline_demo.amendment_lines(flips))
+
+
+def test_the_demo_fails_when_an_honest_checker_was_wrong(
+        monkeypatch, capsys):
+    """CI runs offline_demo.py as a step, and a step is judged by its exit
+    status. A run that prints "AN HONEST CHECKER WAS WRONG" must also exit
+    non-zero, or CI stays green under the one sentence that says the
+    measurement is broken."""
+    import offline_demo
+
+    real = offline_demo.measure
+    monkeypatch.setattr(sys, "argv",
+                        ["offline_demo.py", "--regime", "zoning",
+                         "--cases", "20"])
+    assert offline_demo.main() == 0
+    assert "NEVER WRONG" in capsys.readouterr().out
+
+    def broken(regime, cases):
+        m = real(regime, cases)
+        m["checkers"]["v4_minimal"]["wrong"] = 3
+        return m
+
+    monkeypatch.setattr(offline_demo, "measure", broken)
+    assert offline_demo.main() == 1
+    assert "AN HONEST CHECKER WAS WRONG" in capsys.readouterr().out
 
 
 def test_the_paid_run_refuses_to_overwrite_a_stored_run(

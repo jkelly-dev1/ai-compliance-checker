@@ -215,6 +215,28 @@ def test_a_three_digit_zip_below_the_population_floor_is_not_de_identified():
         "the naive scan sees no direct identifier and calls it de-identified")
 
 
+def test_a_zip3_of_exactly_the_floor_is_not_de_identified():
+    """The rule says MORE THAN 20,000, so a geography of exactly 20,000 fails
+    and one person more passes. The population holds no ZIP3 of exactly the
+    floor, so nothing but this test fixes which side of it the rule sits."""
+    floor = hipaa.ZIP3_POPULATION_FLOOR
+    base = {"released_columns": ("patient_key", "dx_code"),
+            "date_precision": "year", "zip_digits": 3}
+    at = hipaa.Submission("E", "full_assessment",
+                          {**base, "zip3_population": floor})
+    above = hipaa.Submission("E", "full_assessment",
+                             {**base, "zip3_population": floor + 1})
+    assert hipaa.check_definition_aware(at)["de_identification"].result == FAIL
+    assert hipaa.check_definition_aware(above)["de_identification"].result == PASS
+    e = hipaa.make_entity(0)
+    e.released_columns, e.date_precision, e.zip_digits = (
+        ("patient_key", "dx_code"), "year", 3)
+    e.zip3_population = floor
+    assert e.truth()["de_identification"] is False
+    e.zip3_population = floor + 1
+    assert e.truth()["de_identification"] is True
+
+
 def test_without_the_population_figure_the_answer_is_a_refusal():
     fields = {"released_columns": ("patient_key",), "date_precision": "year",
               "zip_digits": 3}
@@ -356,6 +378,25 @@ def test_a_balance_snapshot_cannot_answer_a_timing_rule():
     assert v.result == REFUSE
     # The naive checker calls it compliant from nothing at all.
     assert card_act.check_naive(r)["statement_timing"].result == PASS
+
+
+def test_consent_revoked_the_same_day_as_the_fee_is_not_consent():
+    """A revocation on the day of the fee counts as before it; the day after
+    does not. The population rarely puts the two on one day, so this pins
+    the boundary directly, in the checker and in the truth."""
+    base = {"over_limit_fee_charged": True, "opt_in_on_file": True,
+            "fee_charged_day": 20}
+    same = card_act.Record("A", "exam_file", {**base, "opt_in_revoked_day": 20})
+    after = card_act.Record("A", "exam_file", {**base, "opt_in_revoked_day": 21})
+    rule = "over_limit_opt_in"
+    assert card_act.check_definition_aware(same)[rule].result == FAIL
+    assert card_act.check_definition_aware(after)[rule].result == PASS
+    a = card_act.make_account(0)
+    a.over_limit_fee_charged, a.opt_in_on_file, a.fee_charged_day = True, True, 20
+    a.opt_in_revoked_day = 20
+    assert a.truth()[rule] is False
+    a.opt_in_revoked_day = 21
+    assert a.truth()[rule] is True
 
 
 def test_consent_revoked_before_the_fee_is_not_consent():

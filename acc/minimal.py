@@ -15,15 +15,23 @@ were reading the evidence more carefully than my precondition sets were.
 How it is decided, and why it is not a pile of short-circuits. Hand-written
 short-circuits per rule would be a second implementation of every rule, able to
 disagree with the first, and the disagreement would be invisible. Instead this
-enumerates: take the fields the rule is missing, take the values those fields
-actually take in this regime's population, and evaluate THE SAME
-definition-aware checker over every combination. If every combination returns
-the same verdict, the missing evidence cannot change the answer and the rule is
-decided. If any two differ, it genuinely cannot be decided and the refusal
-stands.
+enumerates: take the fields the rule is missing, take every value each of
+those fields can hold, and evaluate THE SAME definition-aware checker over
+every combination. If every combination returns the same verdict, the missing
+evidence cannot change the answer and the rule is decided. If any two differ,
+it genuinely cannot be decided and the refusal stands.
 
 So there is exactly one implementation of every rule, and this module only ever
 asks it questions.
+
+What "every value a field can hold" means. Each regime declares FIELD_DOMAINS
+beside its population generator, built from the constants the generator draws
+from. The domains are NOT read off the sample being measured: a sample holds a
+subset of what a field can take, and at small sizes a small one, so a checker
+that enumerated only what it had seen would call a case decided when an unseen
+value would have changed the answer. Read off the sample, v4 made wrong
+decisions on SOC 2 at every size from 5 to 45 cases.
+tests/test_invariants.py measures it at those sizes.
 
 The conservative edges are deliberate. A field whose domain is large (a dict of
 per-rule booleans, a set of balances) or a combination count above the cap is
@@ -46,23 +54,16 @@ MAX_DOMAIN = 12
 MAX_COMBINATIONS = 240
 
 
-def value_domains(reg: Regime, n: int) -> dict:
-    """field -> the values it takes across this regime's population.
+def value_domains(reg: Regime) -> dict:
+    """field -> every value it can hold, as the regime declares it.
 
-    Read off the corpus rather than declared, so a regime cannot describe a
-    domain it does not have. Unhashable values (dicts, lists) are recorded as
-    un-enumerable, which is what makes the caller refuse.
+    Only fields small enough to enumerate are returned. A field that is not
+    declared, or whose domain is over MAX_DOMAIN, is absent, which is what
+    makes the caller keep the refusal. tests/test_invariants.py checks that
+    every value the population actually holds is inside its declared domain.
     """
-    domains: dict = {}
-    unhashable: set = set()
-    for _, sub in reg.corpus(n):
-        for key, value in sub.fields.items():
-            try:
-                domains.setdefault(key, set()).add(value)
-            except TypeError:
-                unhashable.add(key)
-    return {k: sorted(v, key=repr) for k, v in domains.items()
-            if k not in unhashable and len(v) <= MAX_DOMAIN}
+    return {k: tuple(v) for k, v in reg.field_domains.items()
+            if len(v) <= MAX_DOMAIN}
 
 
 def check(reg: Regime, sub, domains: dict) -> dict:
@@ -104,18 +105,13 @@ def check(reg: Regime, sub, domains: dict) -> dict:
     return out
 
 
-def make_checker(reg: Regime, n: int = 400):
+def make_checker(reg: Regime):
     """Bind a minimal checker for one regime, with its domains precomputed.
 
-    Pass the same n the measurement uses. The domains are read off the
-    corpus, so a default taken from a smaller corpus describes a different
-    population from the one being graded: a field can be under MAX_DOMAIN in
-    400 cases and over it in 600, and it would then be treated as enumerable
-    while the measurement runs over values it never saw. acc/boundary.py
-    passes its own n. The default is kept only for a caller that wants a
-    checker without a measurement around it.
+    The domains are declared, so the checker is the same whatever sample it
+    is later run over.
     """
-    domains = value_domains(reg, n)
+    domains = value_domains(reg)
 
     def checker(sub):
         return check(reg, sub, domains)

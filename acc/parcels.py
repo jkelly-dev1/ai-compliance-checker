@@ -19,7 +19,7 @@ the Parcel. That gap is the domain, and collapsing it, letting a checker read
 the truth object because the field was convenient, would make every number in
 this repository meaningless while every test still passed.
 
-Setbacks cluster at the minimum on purpose. Applicants build to the envelope,
+Setbacks are made to cluster at the minimum. Applicants build to the envelope,
 so the interesting cases are the ones a foot either side of the line. A uniform
 distribution would put most parcels nowhere near a limit and every checker
 would look excellent.

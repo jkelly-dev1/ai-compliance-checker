@@ -238,6 +238,13 @@ INTAKE_ADDITIONS = ("stores_processes_transmits", "connected_to_cde",
                     "compensating_control_documented", "customized_approach_trra")
 
 
+PAN_PROTECTION_METHODS = ("none", "truncation", "strong_crypto")
+ACCESS_PATHS = ("console", "remote", "internal_only")
+LOG_RETENTION_MONTHS = (3, 6, 12, 18, 24)
+LOG_IMMEDIATE_MONTHS = (1, 3, 6)
+SCAN_CADENCE_DAYS = (30, 90, 180, 365)
+
+
 def make_system(index: int) -> System:
     rng = random.Random(f"acc-pci-{index}")
     tier = rng.choices(EVIDENCE_TIERS, TIER_WEIGHTS)[0]
@@ -254,18 +261,42 @@ def make_system(index: int) -> System:
         default_accounts_present=rng.random() < 0.24,
         stores_pan=stores_pan,
         pan_protection_method=rng.choices(
-            ("none", "truncation", "strong_crypto"), (0.19, 0.28, 0.53))[0],
+            PAN_PROTECTION_METHODS, (0.19, 0.28, 0.53))[0],
         mfa_enabled=rng.random() < 0.68,
-        access_path=rng.choices(("console", "remote", "internal_only"),
-                                (0.21, 0.49, 0.30))[0],
-        log_retention_months=rng.choice((3, 6, 12, 18, 24)),
-        log_immediate_months=rng.choice((1, 3, 6)),
-        scan_cadence_days=rng.choice((30, 90, 180, 365)),
+        access_path=rng.choices(ACCESS_PATHS, (0.21, 0.49, 0.30))[0],
+        log_retention_months=rng.choice(LOG_RETENTION_MONTHS),
+        log_immediate_months=rng.choice(LOG_IMMEDIATE_MONTHS),
+        scan_cadence_days=rng.choice(SCAN_CADENCE_DAYS),
         passing_scan_on_file=rng.random() < 0.62,
         asv_scan_required=rng.random() < 0.55,
         compensating_control_documented=rng.random() < 0.21,
         customized_approach_trra=rng.random() < 0.14,
         evidence_tier=tier)
+
+
+_BOOL = (False, True)
+# Every value the generator above can put in each field, built from the same
+# constants it draws from so the two cannot drift. v4 (acc/minimal.py)
+# enumerates these and nothing else. A field left out is never enumerated, so
+# a rule missing it keeps its refusal.
+FIELD_DOMAINS = {
+    "stores_processes_transmits": _BOOL,
+    "connected_to_cde": _BOOL,
+    "segmentation_validated": _BOOL,
+    "segmentation_test_evidence": _BOOL,
+    "default_accounts_present": _BOOL,
+    "stores_pan": _BOOL,
+    "pan_protection_method": PAN_PROTECTION_METHODS,
+    "mfa_enabled": _BOOL,
+    "access_path": ACCESS_PATHS,
+    "log_retention_months": LOG_RETENTION_MONTHS,
+    "log_immediate_months": LOG_IMMEDIATE_MONTHS,
+    "scan_cadence_days": SCAN_CADENCE_DAYS,
+    "passing_scan_on_file": _BOOL,
+    "asv_scan_required": _BOOL,
+    "compensating_control_documented": _BOOL,
+    "customized_approach_trra": _BOOL,
+}
 
 
 def make_assessment(sy: System) -> Assessment:
